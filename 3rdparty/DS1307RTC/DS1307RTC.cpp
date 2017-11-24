@@ -48,6 +48,7 @@ bool DS1307RTC::set(time_t t)
   write(tm); 
   tm.Second &= 0x7f;  // start the clock
   write(tm); 
+  return true;
 }
 
 // Aquire data from the RTC chip in BCD format
