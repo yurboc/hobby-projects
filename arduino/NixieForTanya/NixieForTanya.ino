@@ -4,9 +4,9 @@
  * (without UART part)
  */
 
-#include <Wire.h>
-#include <Time.h>
-#include <DS1307RTC.h>
+#include <Wire.h> // must be included here so that Arduino library object file references work
+#include <RtcDS3231.h>
+RtcDS3231<TwoWire> Rtc(Wire);
 
 //#define DEBUG
 
@@ -384,10 +384,10 @@ void nextMode()
       break;
     }
     case MODE_SET_WAIT: {
-      /* Set time: hours, minutes, seconds, day, month, year */
-      setTime(hours,minutes,0, 24,11,2017);
+      /* Set new date and time */
+      RtcDateTime newDateTime = RtcDateTime(2017, 11, 24, hours, minutes, 0);
       /* Apply settings */
-      RTC.set(now());
+      Rtc.SetDateTime(newDateTime);
 
       enterSettings = false;
       setMode(mode_prev);
@@ -406,8 +406,27 @@ void nextMode()
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(57600);
+
+  Serial.print("NixieForTanya compiled: ");
+  Serial.print(__DATE__);
+  Serial.print(" ");
+  Serial.println(__TIME__);
   
+  /* RTC SETUP */
+  Rtc.Begin();
+  RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
+  if (!Rtc.IsDateTimeValid()) {
+    Serial.println("RTC lost confidence in the DateTime!");
+    Rtc.SetDateTime(compiled);
+  }
+  if (!Rtc.GetIsRunning()) {
+    Serial.println("RTC was not actively running, starting now");
+    Rtc.SetIsRunning(true);
+  }
+  Rtc.Enable32kHzPin(false);
+  Rtc.SetSquareWavePin(DS3231SquareWavePin_ModeNone);
+
   /* Prepare MPSA42 (anode) controller: */
   for (int i = 0; i < N_lamps; ++i)
     pinMode(anodeEnablePin[i], OUTPUT);
@@ -445,16 +464,7 @@ void setup()
   render_times[PERIOD_NIGHT].darkTimeUs = 500;
   render_times[PERIOD_DAY].lightTimeUs = 500;
   render_times[PERIOD_DAY].darkTimeUs = 500;
-    
-  /* Use DS3231 */
-  setSyncProvider(RTC.get);
   
-  /* Check that time was set */
-  if(timeStatus()!= timeSet) 
-     Serial.println("Unable to sync with the RTC");
-  else
-     Serial.println("RTC has set the system time");
-     
   /* Set diagnostics mode (Release) or show time (Debug) */
   
   #ifndef DEBUG
@@ -508,9 +518,28 @@ void loop()
   /* Update HH:MM */
   if ((mode_current == MODE_SHOW_TIME || mode_current == MODE_SHOW_SECONDS) && modeTimeMs() > 1000) {
     setMode(mode_current); // reset timer
-    seconds = second();
-    minutes = minute();
-    hours = hour();
+
+    char datestring[20];
+    RtcDateTime now = Rtc.GetDateTime();
+    snprintf_P(datestring,
+            sizeof(datestring) / sizeof(datestring[0]),
+            PSTR("%02u.%02u.%04u %02u:%02u:%02u"),
+            now.Day(),
+            now.Month(),
+            now.Year(),
+            now.Hour(),
+            now.Minute(),
+            now.Second() );
+    Serial.print(datestring);
+    Serial.println();
+
+    RtcTemperature temp = Rtc.GetTemperature();
+    Serial.print(temp.AsFloat());
+    Serial.println("C");
+
+    seconds = now.Second();
+    minutes = now.Minute();
+    hours = now.Hour();
     
     /* Set brightness */
     if (hours >= 9 && hours < 21) {
@@ -578,7 +607,7 @@ void loop()
     mode_prev = mode_current;
     setMode(MODE_BRIGHTNESS);
     
-    brightnessCurrentMode = (hour() >= 9 && hour() < 21) ? PERIOD_DAY : PERIOD_NIGHT;
+    brightnessCurrentMode = (hours >= 9 && hours < 21) ? PERIOD_DAY : PERIOD_NIGHT;
     brightnessCurrentValue = render_times[brightnessCurrentMode].lightTimeUs / 10;
   }
   else if (mode_current == MODE_BRIGHTNESS) {
