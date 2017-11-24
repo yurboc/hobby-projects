@@ -12,7 +12,9 @@
 
 /* ===== CONSTANTS ===== */
 
-const int N_lamps = 5;       //NIXIE anodes count
+/* Map digits 0-9 to addreses { 0  1  2  3  4  5  6  7  8  9 } */
+const int kathodesMap[10] =   { 5, 9, 6, 7, 0, 8, 1, 4, 2, 3 };
+const int N_lamps = 5;       // NIXIE anodes count
 const int NO_LAMP = N_lamps; // Constant for invalid lamp ID
 const int W_addr = 4;        // NIXIE kathode address width
 const int day_start = 9;     // 09:00
@@ -26,19 +28,6 @@ const int encA   = 3;  // Encoder out A
 const int encB   = 2;  // Encoder out B
 const int encKey = A3; // Encoder key
 const int ledPin = 13; // Led on board
-
-/* ===== VARIABLES ===== */
-
-/* RTC */
-RtcDS3231<TwoWire> Rtc(Wire);
-
-/* Map digits 0-9 to addreses { 0  1  2  3  4  5  6  7  8  9 } */
-const int kathodesMap[10] =   { 5, 9, 6, 7, 0, 8, 1, 4, 2, 3 };
-
-int dispDigits[]   = { 0, 0, 0, 0, 0 }; // Display values (digits to show)
-int enableAnodes[] = { 1, 1, 1, 1, 1 }; // Enabled lamps
-
-unsigned long last_update_timestamp = 0; // Timer to read values from RTC
 
 /* ===== Types ===== */
 
@@ -70,31 +59,37 @@ struct render_time_t {
   int darkTimeUs;
 };
 
-/* Time (microseconds) to power-on (light) and power-off (dark) lamps */
+/* ===== VARIABLES ===== */
+
+int dispDigits[]   = { 0, 0, 0, 0, 0 }; // Display values (digits to show)
+int enableAnodes[] = { 1, 1, 1, 1, 1 }; // Enabled lamps
+
+/* RTC */
+RtcDS3231<TwoWire> Rtc(Wire);
+unsigned long last_update_timestamp = 0; // Timer to read values from RTC
+
+/* Microseconds to power-on (light) and power-off (dark) lamps */
 render_time_t render_times[NR_PERIODS];
 int brightnessCurrentMode  = PERIOD_NIGHT;
 int brightnessCurrentValue = 0;
-int lightTimeUs            = 500;
-int darkTimeUs             = 500;
+int lightTimeUs = 500;
+int darkTimeUs  = 500;
 
 /* Current mode */
 work_stage_t   stage_current = STAGE_DIAG;
 display_mode_t mode_current  = MODE_NONE;
 display_mode_t mode_prev     = MODE_NONE;
+unsigned long  mode_enter_timestamp = 0; // mode timer
 
-/* Current time */
+boolean kathodesRecovered = true;  // cathodes recovering mode
+boolean enterSettings     = false; // entering time setup
+
+/* Current time (updates from RTC every 1 second) */
 int seconds = 0;
 int minutes = 0;
 int hours   = 0;
 
-/* Mode timer */
-unsigned long mode_enter_timestamp = 0;
-
-/* Aux modes */
-boolean kathodesRecovered = true;
-boolean enterSettings = false;
-
-/* Button states */
+/* Button states with debounce*/
 int buttonState = HIGH;
 int lastButtonState = HIGH;
 unsigned long lastDebounceTime = 0;
@@ -105,21 +100,25 @@ volatile int encoder0Pos = 0;
 volatile boolean PastA = 0;
 volatile boolean PastB = 0;
 
-/* ========== SETUP ========== */
+/* ================================================== SETUP ========== */
 
 void setup()
 {
+  /* Serial port setup */
   Serial.begin(57600);
-
   Serial.print("NixieForTanya compiled: ");
   Serial.print(__DATE__);
   Serial.print(" ");
   Serial.println(__TIME__);
 
-  /* GPIO SETUP */
+  /* GPIO setup */
   pinMode(encKey, INPUT);
   pinMode(ledPin, OUTPUT);
-  
+
+  /* Encoder setup */
+  PastA = (boolean)digitalRead(encA);
+  PastB = (boolean)digitalRead(encB);
+
   /* RTC SETUP */
   Rtc.Begin();
   RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
@@ -139,11 +138,11 @@ void setup()
     delay(1000);
     if (digitalRead(encKey) == LOW) {
       EEPROM.write(0, 255); // diagnostic: 255 - not set, 0 - done
-      EEPROM.write(1, 255); // brightness_0 for night: 255 - not set, 5..95 is ok
-      EEPROM.write(2, 255); // brightness_0 for night: 255 - not set, 5..95 is ok
+      EEPROM.write(1, 255); // brightness_0 for night: 255 - not set, 5..95 is OK
+      EEPROM.write(2, 255); // brightness_0 for night: 255 - not set, 5..95 is OK
     }
 
-    /* STOP HERE */
+    /* STOP after EEPROM clear*/
     while (1) {
       digitalWrite(ledPin, HIGH);
       delay(100);
@@ -155,42 +154,39 @@ void setup()
   /* Prepare MPSA42 (anode) controller: */
   for (int i = 0; i < N_lamps; ++i)
     pinMode(anodeEnablePin[i], OUTPUT);
-    
-  /* Prepare K155ID1 (kathode) controller: */  
+
+  /* Prepare K155ID1 (kathode) controller: */
   for (int i = 0; i < W_addr; ++i)
     pinMode(kathodeAddressPin[i], OUTPUT);
-    
-  /* Prepare Encoder */
-  PastA = (boolean)digitalRead(encA);
-  PastB = (boolean)digitalRead(encB);
-  
+
   /* Setup Timer to read encoder */
-  cli(); //stop interrupts
-  //set timer2 interrupt at 8kHz
-  TCCR2A = 0;// set entire TCCR2A register to 0
-  TCCR2B = 0;// same for TCCR2B
-  TCNT2  = 0;//initialize counter value to 0
+  cli(); // stop interrupts
+  // set timer2 interrupt at 8kHz
+  TCCR2A = 0; // set entire TCCR2A register to 0
+  TCCR2B = 0; // same for TCCR2B
+  TCNT2 = 0;  //initialize counter value to 0
   // set compare match register for 8khz increments
-  OCR2A = 124;// = (16*10^6) / (2000*64) - 1 (must be <256)
-  // turn on CTC mode
-  TCCR2A |= (1 << WGM21);
-  // Set CS01 and CS00 bits for 64 prescaler
-  TCCR2B |= (1 << CS01) | (1 << CS00);
-  // enable timer compare interrupt
-  TIMSK2 |= (1 << OCIE2A);
-  sei();//allow interrupts
-    
+  OCR2A = 124; // = (16*10^6) / (2000*64) - 1 (must be <256)
+  TCCR2A |= (1 << WGM21);              // turn on CTC mode
+  TCCR2B |= (1 << CS01) | (1 << CS00); // set CS01 and CS00 bits for 64 prescaler
+  TIMSK2 |= (1 << OCIE2A);             // enable timer compare interrupt
+  sei(); // allow interrupts
+
   /* Load data from EEPROM */
   byte eepromHasDiag         = EEPROM.read(0);
   byte eepromNightBrightness = EEPROM.read(1);
   byte eepromDayBrightness   = EEPROM.read(2);
 
-  /* Set brightness */
+  /* Set brightness from EEPROM */
   int defaultBrightness = 50;
-  setBrightness(PERIOD_NIGHT, (eepromNightBrightness == 255) ? defaultBrightness : eepromNightBrightness);
-  setBrightness(PERIOD_DAY, (eepromDayBrightness == 255) ? defaultBrightness : eepromDayBrightness);
-  
-  /* Set diagnostics mode or show time right now */
+  setBrightness(PERIOD_NIGHT, (eepromNightBrightness == 255)
+                                ? defaultBrightness
+                                : eepromNightBrightness);
+  setBrightness(PERIOD_DAY, (eepromDayBrightness == 255)
+                                ? defaultBrightness
+                                : eepromDayBrightness);
+
+  /* Start NIXIE diagnostics mode */
   if (eepromHasDiag == 255) {
     setStage(STAGE_DIAG);
     setMode(MODE_DIAG);
@@ -201,17 +197,17 @@ void setup()
   }
 }
 
-/* ========== LOOP ========== */
+/* ================================================== LOOP ========== */
 
 void loop()
 {
   /* Set digits */
   processing();
-  
+
   /* Display digits */
   rendering();
-  
-  /* Switch mode: DIAG --> WORK */
+
+  /* Switch mode: DIAGNOSTICS --> SHOW TIME */
   if (stage_current == STAGE_DIAG && mode_current == MODE_DIAG && modeTimeMs() > 20000) {
     setMode(MODE_NONE);
     EEPROM.write(0, 0); // diagnostic done
@@ -224,28 +220,19 @@ void loop()
   else if (stage_current == STAGE_DIAG && digitalRead(encKey) == LOW) {
     setStage(STAGE_WORK);
     setMode(MODE_SHOW_TIME);
-    encoder0Pos = 0; 
+    encoder0Pos = 0;
   }
-  
-  /* Exit diag mode stage */
+
+  /* Return if diag stage */
   if (stage_current != STAGE_WORK) return;
-  
-  /* Switch mode: SETUP BRIGHTNESS --> SHOW TIME */
-  if ((mode_current == MODE_BRIGHTNESS) && (modeTimeMs() > 5000)) {
-    if (brightnessCurrentMode == PERIOD_NIGHT)
-      EEPROM.write(1, brightnessCurrentValue); // save brightness for PERIOD_DAY
-    else if (brightnessCurrentMode == PERIOD_DAY)
-      EEPROM.write(2, brightnessCurrentValue); // save brightness for PERIOD_DAY
-    setMode(mode_prev); // return to normal mode
-  }
-  
+
   /* Update brightness preview for setup */
   if (mode_current == MODE_BRIGHTNESS) {
     lightTimeUs = brightnessCurrentValue * 10;
     darkTimeUs = (100 - brightnessCurrentValue) * 10;
   }
-  
-  /* Update HH:MM:SS every second */
+
+  /* Update HH:MM:SS every 1 second */
   if ((mode_current == MODE_SHOW_TIME || mode_current == MODE_SHOW_SECONDS) && modeTimeMs() > 1000) {
     setMode(mode_current); // reset mode timer
 
@@ -269,11 +256,11 @@ void loop()
     Serial.print(temp.AsFloat());
     Serial.println("C");
 
-    /* Update internal global variables */
+    /* Update global variables */
     seconds = now.Second();
     minutes = now.Minute();
     hours = now.Hour();
-    
+
     /* Set brightness for current hour */
     if (hours >= day_start && hours < night_start) {
       lightTimeUs = render_times[PERIOD_DAY].lightTimeUs;
@@ -283,44 +270,47 @@ void loop()
       lightTimeUs = render_times[PERIOD_NIGHT].lightTimeUs;
       darkTimeUs = render_times[PERIOD_NIGHT].darkTimeUs;
     }
-    
+
     /* Start kathode recovering every 10 minutes */
-    if (minutes % 10 == 0) {
-      if (!kathodesRecovered) {
-        mode_prev = mode_current;
-        setMode(MODE_RECOVERY_KATHODES);
-        kathodesRecovered = true;
-      }
+    if (minutes % 10 == 0 && !kathodesRecovered) {
+      mode_prev = mode_current;
+      setMode(MODE_RECOVERY_KATHODES);
+      kathodesRecovered = true;
     }
-    else {
-      kathodesRecovered = false;
-    }
+    if (minutes % 10 != 0) kathodesRecovered = false;
   }
-  
+
   /* Stop kathodes recovering */
   if ((mode_current == MODE_RECOVERY_KATHODES) && (modeTimeMs() > 300)) {
     setMode(mode_prev);
   }
-  
-  /* Read button */
-  int reading = digitalRead(encKey);
-  if (reading != lastButtonState) {
+
+  /* Switch mode: SETUP BRIGHTNESS --> SHOW TIME */
+  if ((mode_current == MODE_BRIGHTNESS) && (modeTimeMs() > 5000)) {
+    if (brightnessCurrentMode == PERIOD_NIGHT)
+      EEPROM.write(1, brightnessCurrentValue); // save brightness for PERIOD_DAY
+    else if (brightnessCurrentMode == PERIOD_DAY)
+      EEPROM.write(2, brightnessCurrentValue); // save brightness for PERIOD_DAY
+    setMode(mode_prev); // return to normal mode
+  }
+
+  /* Detect button click */
+  int currentButtonState = digitalRead(encKey);
+  if (currentButtonState != lastButtonState) {
     lastDebounceTime = millis();
-    lastButtonState = reading;
+    lastButtonState = currentButtonState;
   }
-  if ((millis() - lastDebounceTime) > debounceDelay && (reading != buttonState)) {
-    if (buttonState == LOW && reading == HIGH) {
-      nextMode();
-    }
-    buttonState = reading;
+  if ((millis() - lastDebounceTime) > debounceDelay && (currentButtonState != buttonState)) {
+    if (buttonState == LOW && currentButtonState == HIGH) nextMode();
+    buttonState = currentButtonState;
   }
-  if ((millis() - lastDebounceTime) > 1500 && (reading == LOW)) {
-    enterSettings = true;
-  }
-  
+
+  /* Detect button hold */
+  if ((millis() - lastDebounceTime) > 1500 && (currentButtonState == LOW)) enterSettings = true;
+
   /* Process encoder value */
   if (encoder0Pos == 0) return;
-  
+
   if (mode_current == MODE_SET_HOURS) {
     encoder0Pos %= 24;
     hours += encoder0Pos;
@@ -338,7 +328,7 @@ void loop()
   else if (mode_current == MODE_SHOW_TIME || mode_current == MODE_SHOW_SECONDS) {
     mode_prev = mode_current;
     setMode(MODE_BRIGHTNESS);
-    
+
     brightnessCurrentMode = (hours >= day_start && hours < night_start) ? PERIOD_DAY : PERIOD_NIGHT;
     brightnessCurrentValue = render_times[brightnessCurrentMode].lightTimeUs / 10;
   }
@@ -350,8 +340,7 @@ void loop()
     else if (brightnessCurrentValue < 5) brightnessCurrentValue = 5;
     encoder0Pos = 0;
 
-    render_times[brightnessCurrentMode].lightTimeUs = brightnessCurrentValue * 10;
-    render_times[brightnessCurrentMode].darkTimeUs = (100 - brightnessCurrentValue) * 10;
+    setBrightness(brightnessCurrentMode, brightnessCurrentValue);
   }
 }
 
@@ -361,13 +350,11 @@ void loop()
 void setAnode(int id)
 {
   /* Switch-off all lamps */
-  for (int i = 0; i < N_lamps; ++i)
-    digitalWrite(anodeEnablePin[i], LOW);
-  
+  for (int i = 0; i < N_lamps; ++i) digitalWrite(anodeEnablePin[i], LOW);
+
   /* Check lamp ID */
-  if (id < 0 || id >= N_lamps)
-    return;
-  
+  if (id < 0 || id >= N_lamps) return;
+
   /* Switch-on selected lamp */
   digitalWrite(anodeEnablePin[id], HIGH);
 }
@@ -376,9 +363,8 @@ void setAnode(int id)
 void setKathode(int digit)
 {
   /* Check limits: */
-  if (digit < 0 || digit > 9)
-    return;
-  
+  if (digit < 0 || digit > 9) return;
+
   /* Write address */
   for (int i = 0; i < W_addr; ++i) {
     int kathodeAddr = kathodesMap[digit];
@@ -397,17 +383,17 @@ void rendering()
     setAnode(NO_LAMP);
     delayMicroseconds(darkTimeUs);
   }
-  
+
   /* Scan points: 1 - bottom, 2 - top, 3 - both */
   int pointTop = !!(dispDigits[4] & 0x01);
   int pointBottom = !!(dispDigits[4] & 0x02);
-  
+
   setKathode(pointTop ? 9 : 1);
   if (enableAnodes[4] && pointTop) setAnode(4);
   delayMicroseconds(lightTimeUs);
   setAnode(NO_LAMP);
   delayMicroseconds(darkTimeUs);
-  
+
   setKathode(pointBottom ? 8 : 1);
   if (enableAnodes[4] && pointBottom) setAnode(4);
   delayMicroseconds(lightTimeUs);
@@ -426,6 +412,12 @@ void setMode(int mode)
 {
   mode_enter_timestamp = millis();
   mode_current = (display_mode_t)mode;
+}
+
+/* Get time in mode */
+unsigned long modeTimeMs()
+{
+  return (millis() - mode_enter_timestamp);
 }
 
 /* Select brightness for night or day */
@@ -449,17 +441,11 @@ void setBrightness(int target, int brightness)
   }
 }
 
-/* Get time in mode */
-unsigned long modeTimeMs()
-{
-  return (millis() - mode_enter_timestamp);
-}
-
 /* Update values */
 void processing()
 {
   unsigned long mode_current_time = modeTimeMs();
-  
+
   switch (mode_current) {
     case MODE_NONE: {
       enableAnodes[0] = 0;
@@ -469,14 +455,14 @@ void processing()
       enableAnodes[4] = 0;
       break;
     }
-    
+
     case MODE_DIAG: {
       enableAnodes[0] = 1;
       enableAnodes[1] = 1;
       enableAnodes[2] = 1;
       enableAnodes[3] = 1;
       enableAnodes[4] = 1;
-      
+
       if (mode_current_time < 10000) {
         int digit = (mode_current_time / 1000) % 10;
         dispDigits[0] = digit;
@@ -495,7 +481,7 @@ void processing()
       }
       break;
     }
-    
+
     case MODE_SHOW_TIME: {
       enableAnodes[0] = 1;
       enableAnodes[1] = 1;
@@ -512,7 +498,7 @@ void processing()
       dispDigits[4] = 3;
       break;
     }
-    
+
     case MODE_SHOW_SECONDS: {
       enableAnodes[0] = 1;
       enableAnodes[1] = 1;
@@ -529,7 +515,7 @@ void processing()
       dispDigits[4] = 2;
       break;
     }
-    
+
     case MODE_SET_HOURS: {
       enableAnodes[0] = 1;
       enableAnodes[1] = 1;
@@ -543,7 +529,7 @@ void processing()
       dispDigits[4] = 1;
       break;
     }
-    
+
     case MODE_SET_MINUTES: {
       enableAnodes[0] = (mode_current_time % 500 < 300) ? 1 : 0;
       enableAnodes[1] = (mode_current_time % 500 < 300) ? 1 : 0;
@@ -557,7 +543,7 @@ void processing()
       dispDigits[4] = 1;
       break;
     }
-    
+
     case MODE_SET_WAIT: {
       enableAnodes[0] = 1;
       enableAnodes[1] = 1;
@@ -571,7 +557,7 @@ void processing()
       dispDigits[4] = 3;
       break;
     }
-    
+
     case MODE_BRIGHTNESS: {
       enableAnodes[0] = 1;
       enableAnodes[1] = 1;
@@ -583,7 +569,7 @@ void processing()
       dispDigits[3] = brightnessCurrentMode % 10;
       break;
     }
-    
+
     case MODE_RECOVERY_KATHODES: {
       enableAnodes[0] = 1;
       enableAnodes[1] = 1;
@@ -645,10 +631,10 @@ void nextMode()
     case MODE_BRIGHTNESS: {
       /* Save brightness for selected PERIOD */
       if (brightnessCurrentMode == PERIOD_NIGHT)
-        EEPROM.write(1, brightnessCurrentValue); 
+        EEPROM.write(1, brightnessCurrentValue);
       else if (brightnessCurrentMode == PERIOD_DAY)
         EEPROM.write(2, brightnessCurrentValue);
-      
+
       /* Selected next PERIOD */
       brightnessCurrentMode = (brightnessCurrentMode == PERIOD_NIGHT) ? PERIOD_DAY : PERIOD_NIGHT;
       brightnessCurrentValue = render_times[brightnessCurrentMode].lightTimeUs / 10;
@@ -660,7 +646,7 @@ void nextMode()
 /* ===== ISR ===== */
 
 ISR(TIMER2_COMPA_vect) // timer2 interrupt
-{ 
+{
   /* Read encoder */
   boolean nowA = (boolean)digitalRead(encA);
   boolean nowB = (boolean)digitalRead(encB);
