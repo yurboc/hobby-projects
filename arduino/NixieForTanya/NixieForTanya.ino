@@ -80,6 +80,7 @@ work_stage_t   stage_current = STAGE_DIAG;
 display_mode_t mode_current  = MODE_NONE;
 display_mode_t mode_prev     = MODE_NONE;
 unsigned long  mode_enter_timestamp = 0; // mode timer
+unsigned long  mode_enter_brightness = 0; // timestamp for brightness setup
 
 boolean kathodesRecovered = true;  // cathodes recovering mode
 boolean enterSettings     = false; // entering time setup
@@ -307,11 +308,28 @@ void loop()
     encoder0Pos = 0;
   }
   else if (mode_current == MODE_SHOW_TIME || mode_current == MODE_SHOW_SECONDS) {
-    mode_prev = mode_current;
-    setMode(MODE_BRIGHTNESS);
 
-    brightnessCurrentMode = (hours >= day_start && hours < night_start) ? PERIOD_DAY : PERIOD_NIGHT;
-    brightnessCurrentValue = render_times[brightnessCurrentMode].lightTimeUs / 10;
+    // Ignore first step of encoder
+    if (mode_enter_brightness == 0) {
+      // Enter "wait" mode
+      encoder0Pos = 0;
+      mode_enter_brightness = millis();
+    }
+    else if (millis() - mode_enter_brightness > 1000 && abs(encoder0Pos) < 5) {
+      // Exit "wait" mode by timeout: in 1 second encoder rotated less than 5 steps
+      encoder0Pos = 0;
+      mode_enter_brightness = 0;
+    }
+    else {
+      // Start "brightness setup"
+      encoder0Pos = 0;
+      mode_enter_brightness = 0;
+
+      mode_prev = mode_current;
+      setMode(MODE_BRIGHTNESS);
+      brightnessCurrentMode = (hours >= day_start && hours < night_start) ? PERIOD_DAY : PERIOD_NIGHT;
+      brightnessCurrentValue = render_times[brightnessCurrentMode].lightTimeUs / 10;
+    }
   }
   else if (mode_current == MODE_BRIGHTNESS) {
     setMode(MODE_BRIGHTNESS); // reset mode timer
