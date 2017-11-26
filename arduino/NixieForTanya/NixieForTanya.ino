@@ -236,27 +236,8 @@ void loop()
   if ((mode_current == MODE_SHOW_TIME || mode_current == MODE_SHOW_SECONDS) && modeTimeMs() > 1000) {
     setMode(mode_current); // reset mode timer
 
-    /* Print current time to UART */
-    char datestring[20];
-    RtcDateTime now = Rtc.GetDateTime();
-    snprintf_P(datestring,
-            sizeof(datestring) / sizeof(datestring[0]),
-            PSTR("%02u.%02u.%04u %02u:%02u:%02u"),
-            now.Day(),
-            now.Month(),
-            now.Year(),
-            now.Hour(),
-            now.Minute(),
-            now.Second() );
-    Serial.print(datestring);
-    Serial.println();
-
-    /* Print current temperature to UART */
-    RtcTemperature temp = Rtc.GetTemperature();
-    Serial.print(temp.AsFloat());
-    Serial.println("C");
-
     /* Update global variables */
+    RtcDateTime now = Rtc.GetDateTime();
     seconds = now.Second();
     minutes = now.Minute();
     hours = now.Hour();
