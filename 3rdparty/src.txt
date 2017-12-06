@@ -1,0 +1,6 @@
+Rtc_by_Makuna:
+https://github.com/Makuna/Rtc
+
+LiquidCrystal_I2C:
+http://image.dfrobot.com/image/data/DFR0154/LiquidCrystal_I2Cv1-1.rar
+https://github.com/fdebrabander/Arduino-LiquidCrystal-I2C-library
