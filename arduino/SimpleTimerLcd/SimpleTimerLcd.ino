@@ -59,16 +59,15 @@ boolean enterSettings = false;
 //
 volatile int encoder0Pos = 0;
 volatile boolean PastA = 0;
-volatile boolean PastB = 0;
 
 //
 // Current time (updates from RTC every 1 second)
 //
-int seconds = 0;
-int minutes = 0;
-int hours   = 0;
-int day     = 0;
-int month   = 0;
+int8_t seconds = 0;
+int8_t minutes = 0;
+int8_t hours   = 0;
+int8_t day     = 0;
+int8_t month   = 0;
 int year    = 0;
 int temp    = 0;
 unsigned long lastUpdatedRtc = 0;
@@ -77,14 +76,14 @@ unsigned long lastUpdatedTemplate = 0;
 //
 // Current timer
 //
-int init_timer_seconds = 0;
-int init_timer_minutes = 0;
-int init_timer_hours   = 0;
-int timer_seconds = 0;
-int timer_minutes = 0;
-int timer_hours   = 0;
-int lastRegisteredSecond = 0;
-int beepTime = 0;
+int8_t init_timer_seconds = 0;
+int8_t init_timer_minutes = 0;
+int8_t init_timer_hours   = 0;
+int8_t timer_seconds = 0;
+int8_t timer_minutes = 0;
+int8_t timer_hours   = 0;
+int8_t lastRegisteredSecond = 0;
+int8_t beepTime = 0;
 
 void setup()
 {
@@ -98,7 +97,6 @@ void setup()
   lcd.createChar(4, charge_full);
   lcd.createChar(5, charge_usb);
   lcd.createChar(6, black_square);
-  
   
   // RTC setup
   rtc.Begin();
@@ -236,26 +234,32 @@ void readEncoder()
   if (encoder0Pos == 0) return;
 
   // Setup current time
-  if (currentMode == ModeSetCurrentDay)          updateEncoderValueWithLimits(day, 1, 31);
-  else if (currentMode == ModeSetCurrentMonth)   updateEncoderValueWithLimits(month, 1, 12);
-  else if (currentMode == ModeSetCurrentYear)    updateEncoderValueWithLimits(year, 2000, 2100);
-  else if (currentMode == ModeSetCurrentHours)   updateEncoderValueWithLimits(hours, 0, 24);
-  else if (currentMode == ModeSetCurrentMinutes) updateEncoderValueWithLimits(minutes, 0, 59);
-  else if (currentMode == ModeSetCurrentSeconds) updateEncoderValueWithLimits(seconds, 0, 59);
+  if (currentMode == ModeSetCurrentDay)          updateByteUsingEncoderValue(day, 1, 31);
+  else if (currentMode == ModeSetCurrentMonth)   updateByteUsingEncoderValue(month, 1, 12);
+  else if (currentMode == ModeSetCurrentYear)    updateIntUsingEncoderValue(year, 2000, 2100);
+  else if (currentMode == ModeSetCurrentHours)   updateByteUsingEncoderValue(hours, 0, 24);
+  else if (currentMode == ModeSetCurrentMinutes) updateByteUsingEncoderValue(minutes, 0, 59);
+  else if (currentMode == ModeSetCurrentSeconds) updateByteUsingEncoderValue(seconds, 0, 59);
 
   // Setup timer
-  else if (currentMode == ModeSetTimerHours)   updateEncoderValueWithLimits(timer_hours, 0, 99);
-  else if (currentMode == ModeSetTimerMinutes) updateEncoderValueWithLimits(timer_minutes, 0, 59);
-  else if (currentMode == ModeSetTimerSeconds) updateEncoderValueWithLimits(timer_seconds, 0, 59);
+  else if (currentMode == ModeSetTimerHours)   updateByteUsingEncoderValue(timer_hours, 0, 99);
+  else if (currentMode == ModeSetTimerMinutes) updateByteUsingEncoderValue(timer_minutes, 0, 59);
+  else if (currentMode == ModeSetTimerSeconds) updateByteUsingEncoderValue(timer_seconds, 0, 59);
 }
 
-void updateEncoderValueWithLimits(int &value, int lower, int upper)
+void updateByteUsingEncoderValue(int8_t &value, int8_t lower, int8_t upper)
 {
-  value += encoder0Pos;
-  
+  value += encoder0Pos; // actually abs(encoder0Pos) always less 127
   if (value > upper) value = upper;
   else if (value < lower) value = lower;
+  encoder0Pos = 0;
+}
 
+void updateIntUsingEncoderValue(int &value, int lower, int upper)
+{
+  value += encoder0Pos;
+  if (value > upper) value = upper;
+  else if (value < lower) value = lower;
   encoder0Pos = 0;
 }
 
@@ -645,5 +649,4 @@ ISR(TIMER1_COMPA_vect)
       encoder0Pos++;
   }
   PastA = nowA;
-  PastB = nowB;
 }
