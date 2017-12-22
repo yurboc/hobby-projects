@@ -130,7 +130,7 @@ void setup()
   sei();
 
   // System check
-  systemCheck();
+  //systemCheck();
 
   // Start working
   currentMode = ModeClock;
@@ -140,48 +140,77 @@ void loop()
 {
   // Read encoder value
   readEncoder();
-  
-  // Show template
-  showTemplate();
 
-  // Update current time every 0.5 second
-  if ((currentMode == ModeClock || currentMode == ModeTimer || currentMode == ModeTimerRun) && millis() - lastUpdatedRtc > 500) {
+  // Detect button click
+  int currentButtonState = digitalRead(encKey);
+  if (currentButtonState != lastButtonState) {
+    lastDebounceTime = millis();
+    lastButtonState = currentButtonState;
+  }
+  if ((millis() - lastDebounceTime) > 50 && (currentButtonState != buttonState)) {
+    if (buttonState == LOW && currentButtonState == HIGH) {
+      beepOn();
+      delay(10);
+      beepOff();
+      currentMode = (ModeGlobal)nextMode();
+    }
+    buttonState = currentButtonState;
+  }
+
+  // Detect button hold
+  if ((millis() - lastDebounceTime) > 1500 && (currentButtonState == LOW)) {
+    if (!enterSettings) {
+      beepOn();
+      delay(50);
+      beepOff();
+    }
+    enterSettings = true;
+  }
+
+  // Update state every 0.5 seconds
+  if (millis() - lastUpdatedRtc > 500) {
     lastUpdatedRtc = millis();
-    
-    RtcDateTime now = rtc.GetDateTime();
-    temp    = rtc.GetTemperature().AsWholeDegrees();
-    day     = now.Day();
-    month   = now.Month();
-    year    = now.Year();
-    hours   = now.Hour();
-    minutes = now.Minute();
-    seconds = now.Second();
 
-    // Update timer
-    if (lastRegisteredSecond != seconds && currentMode == ModeTimerRun) {
-      updateTimerTimeout();
+    // Update current time and timer
+    if (currentMode == ModeClock || currentMode == ModeTimer || currentMode == ModeTimerRun) {
 
-      // Timer pre-alert
-      if (timer_hours == 0 && timer_minutes == 0 && (timer_seconds <= 10 && timer_seconds > 0)) {
-        greenOn(); delay(100); greenOff(); delay(50); greenOn(); delay(100); greenOff();
+      // Update time
+      RtcDateTime now = rtc.GetDateTime();
+      temp    = rtc.GetTemperature().AsWholeDegrees();
+      day     = now.Day();
+      month   = now.Month();
+      year    = now.Year();
+      hours   = now.Hour();
+      minutes = now.Minute();
+      seconds = now.Second();
+
+      // Update timer
+      if (lastRegisteredSecond != seconds && currentMode == ModeTimerRun) {
+        lastRegisteredSecond = seconds;
+        updateTimerTimeout();
+
+        // Timer pre-alert
+        if (timer_hours == 0 && timer_minutes == 0 && (timer_seconds <= 10 && timer_seconds > 0)) {
+          greenOn(); delay(50); greenOff(); delay(50); greenOn(); delay(50); greenOff();
+        }
+        else if (timer_hours == 0 && timer_minutes == 0 && (timer_seconds <= 30 && timer_seconds > 10)) {
+          greenOn(); delay(50); greenOff();
+        }
       }
-      else if (timer_hours == 0 && timer_minutes == 0 && (timer_seconds <= 30 && timer_seconds > 10)) {
-        greenOn(); delay(50); greenOff();
+
+      // Timer beep
+      if (beepTime > 0 && seconds % 2 == 0) {
+        yellowOn();
+        beepOn(); delay(100); beepOff(); delay(50); beepOn(); delay(100); beepOff();
+        yellowOff();
+
+        if (--beepTime == 0)
+          currentMode = ModeTimer;
       }
-      
-      lastRegisteredSecond = seconds;
     }
 
-    // Timer beep
-    if (beepTime > 0 && seconds % 2 == 0) {
-      yellowOn();
-      beepOn(); delay(100); beepOff(); delay(50); beepOn(); delay(100); beepOff();
-      yellowOff();
-
-      if (--beepTime == 0) {
-        currentMode = ModeTimer;
-      }
-    }
+    // Show template
+    showTemplate();
 
     // Check health state
     if (lcd.getBacklight() && !hasUsb()) {
@@ -197,32 +226,6 @@ void loop()
     else if (encoder0Pos < -3 && currentMode == ModeTimer)
       currentMode = ModeClock;
     encoder0Pos = 0;
-  }
-  
-  // Detect button click
-  int currentButtonState = digitalRead(encKey);
-  if (currentButtonState != lastButtonState) {
-    lastDebounceTime = millis();
-    lastButtonState = currentButtonState;
-  }
-  if ((millis() - lastDebounceTime) > 50 && (currentButtonState != buttonState)) {
-    if (buttonState == LOW && currentButtonState == HIGH) {
-      beepOn();
-      delay(10);
-      beepOff();
-      currentMode = nextMode();
-    }
-    buttonState = currentButtonState;
-  }
-
-  // Detect button hold
-  if ((millis() - lastDebounceTime) > 1500 && (currentButtonState == LOW)) {
-    if (!enterSettings) {
-      beepOn();
-      delay(50);
-      beepOff();
-    }
-    enterSettings = true;
   }
 }
 
@@ -567,7 +570,6 @@ int battState()
 
 void systemCheck()
 {
-  /*
   // Load symbols
   lcd.createChar(0, bukva_P);
   lcd.createChar(1, bukva_I);
@@ -624,7 +626,6 @@ void systemCheck()
   lcd.print(" ===== OK ===== ");
   delay(500);
   lcd.clear();
-  */
 }
 
 
