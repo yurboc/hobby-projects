@@ -1,5 +1,5 @@
 ##############################################################
- 
+
 atmega8.name=ATmega8 at 8 MHz (w/o crystal)
 atmega8.bootloader.tool=avrdude
 atmega8.bootloader.low_fuses=0xE4
@@ -10,9 +10,11 @@ atmega8.bootloader.unlock_bits=0x3F
 atmega8.bootloader.lock_bits=0x0F
 atmega8.upload.tool=avrdude
 #atmega8.upload.maximum_size=7168
+atmega8.upload.maximum_size=8192
 atmega8.build.mcu=atmega8
 atmega8.build.f_cpu=8000000L
 atmega8.build.core=arduino
 atmega8.build.variant=standard
+atmega8.build.board=AVR_ATMEGA8
 
 ##############################################################
