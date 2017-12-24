@@ -188,11 +188,10 @@ void loop()
         updateTimerTimeout();
 
         // Timer pre-alert
-        if (timer_hours == 0 && timer_minutes == 0 && (timer_seconds <= 10 && timer_seconds > 0)) {
-          greenOn(); delay(50); greenOff(); delay(50); greenOn(); delay(50); greenOff();
-        }
-        else if (timer_hours == 0 && timer_minutes == 0 && (timer_seconds <= 30 && timer_seconds > 10)) {
-          greenOn(); delay(50); greenOff();
+        if (timer_hours == 0 && timer_minutes == 0 && (timer_seconds <= 30 && timer_seconds > 0)) {
+          yellowOn();
+          delay(100);
+          yellowOff();
         }
       }
 
@@ -211,9 +210,15 @@ void loop()
     showTemplate();
 
     // Check health state
-    if (lcd.getBacklight() && !hasUsb()) {
-        lcd.noBacklight();
+    if (hasUsb()) {
+      if (currentMode == ModeTimerRun) greenOn();
+      else greenOff();
     }
+    else {
+      greenOff();
+      if (lcd.getBacklight()) lcd.noBacklight();
+    }
+
     if (battState() == 1) {
       redOn(); delay(50); redOff(); delay(10); redOn(); delay(50); redOff();
     }
@@ -267,7 +272,7 @@ void updateTimerTimeout()
 {
   // Timer timeout
   if (!timer_hours && !timer_minutes && !timer_seconds && currentMode == ModeTimerRun && beepTime == 0) {
-    beepTime = 10;
+    beepTime = 31; // 30 seconds plus 1 signal
     return;
   }
 
