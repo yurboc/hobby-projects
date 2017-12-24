@@ -83,6 +83,7 @@ int8_t timer_minutes = 0;
 int8_t timer_hours   = 0;
 int8_t lastRegisteredSecond = 0;
 int8_t beepTime = 0;
+int8_t timer_progress = 0;
 
 void setup()
 {
@@ -270,6 +271,11 @@ void updateTimerTimeout()
     return;
   }
 
+  // Calculate timer progress
+  uint32_t total_time_sec = init_timer_seconds + 60*init_timer_minutes + 60*60*init_timer_hours;
+  uint32_t current_time_sec = timer_seconds + 60*timer_minutes + 60*60*timer_hours;
+  timer_progress = (current_time_sec * 16) / total_time_sec;
+
   // Decrease timer counter
   if (timer_seconds > 0) {
     --timer_seconds;
@@ -386,8 +392,11 @@ void templateShowTimer()
 {
   // Line 1: [################]
   lcd.home();
-  for (int i = 0; i < 16; ++i) {
-    if (currentMode == ModeTimerRun) lcd.write('>');
+  for (uint8_t i = 16; i > 0; --i) {
+    if (currentMode == ModeTimerRun) {
+      if (timer_progress < i) lcd.write('#');
+      else lcd.write('>');
+    }
     else lcd.write(6); // black_square
   }
 
