@@ -25,7 +25,7 @@ int nextMode();
 void hwOn(uint8_t hwPin);
 void hwOff(uint8_t hwPin);
 bool hasUsb();
-int battState();
+uint8_t battState();
 void systemCheck();
 
 //
@@ -64,6 +64,7 @@ const int ledG = 9;    // Green LED
 // Global state
 //
 ModeGlobal currentMode = ModeTesting;
+uint16_t batt_mV = 0;
 
 //
 // Button state (with debounce)
@@ -371,7 +372,10 @@ void templateShowClock()
 
   // Line 2: [    HH:MM:SS  uc]
   lcd.setCursor(0, 1);
-  lcd.print("    ");
+  if (hasUsb()) {
+    lcd.print("    ");
+  }
+
   if (enterSettings && currentMode != ModeSetCurrentHours) {
     lcd.write('_');
     lcd.write('_');
@@ -398,13 +402,22 @@ void templateShowClock()
     lcd.write('0' + seconds/10);
     lcd.write('0' + seconds%10);
   }
-  lcd.print("  ");
+  lcd.write(' ');
+  if (hasUsb()) lcd.write(' ');
 
   // Print battery status
-  lcd.write(hasUsb() ? 5 : ' '); // charge_usb
-  int batt = battState(); // 0 or 1..4
+  uint8_t batt = battState(); // 0 or 1..4
   if (batt == 0) lcd.write(' '); // none
   else lcd.write(batt); // damage/empty/half/full
+  if (hasUsb()) lcd.write(5); // charge_usb
+  else { // Print battery voltage
+    lcd.write('=');
+    lcd.write('0' + batt_mV/1000%10);
+    lcd.write('.');
+    lcd.write('0' + batt_mV/100%10);
+    lcd.write('0' + batt_mV/10%10);
+    lcd.write('B');
+  }
 }
 
 void templateShowTimer()
@@ -420,7 +433,9 @@ void templateShowTimer()
   }
 
   // Line 2: [    HH:MM:SS    ]
-  lcd.setCursor(4, 1);
+  lcd.setCursor(0, 1);
+  lcd.print("    ");
+
   if (enterSettings && currentMode != ModeSetTimerHours) {
     lcd.write('_');
     lcd.write('_');
@@ -450,10 +465,10 @@ void templateShowTimer()
   lcd.print("  ");
 
   // Print battery status
-  lcd.write(hasUsb() ? 5 : ' '); // charge_usb
-  int batt = battState(); // 0 or 1..4
+  uint8_t batt = battState(); // 0 or 1..4
   if (batt == 0) lcd.write(' '); // none
   else lcd.write(batt); // damage/empty/half/full
+  lcd.write(hasUsb() ? 5 : ' '); // charge_usb
 }
 
 int nextMode()
@@ -535,17 +550,31 @@ bool hasUsb()
   return (usbVal > 512);
 }
 
-int battState()
+uint8_t battState()
 {
-  int battVal = analogRead(A3);
+  // 1. Read reference (1.23V)
   
-  if (battVal > 833) // ~3.5V
+  // REFS1 --> select reference: 0 = AVCC; 1 = internal 2.56V reference
+  // REFS0 --> connect reference to AREF: 0 = diconnect; 1 = connect
+  // MUX   --> select analog input: 0111 = 1.23V (Vbg)
+  ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
+  ADCSRA |= _BV(ADSC); // start ADC
+  while (ADCSRA & _BV(ADSC)); // wait for ADC finished
+  uint16_t result_ADC = ADCL; // read ADCL (lock ADCH)
+  result_ADC += ADCH << 8;    // read ADCH (unlock both)
+  uint32_t vcc_mV = 1230ull * 1023ull / (uint32_t)result_ADC; 
+  //float vcc_mV = (1.23 * 1000.0 * 1023.0) / result_ADC; // 1.23 * 1000mV * max_ADC / result_ADC
+  
+  // 2. Read battery voltage
+  
+  batt_mV = (vcc_mV * (uint32_t)analogRead(A3)) / 1023ull;
+  if (batt_mV > 3500) // ~3500 mV
     return 4;
-  else if (battVal > 785) // ~3.3V
+  else if (batt_mV > 3300) // ~3300 mV
     return 3;
-  else if (battVal > 714) // ~3.0V
+  else if (batt_mV > 3000) // ~3000 mV
     return 2;
-  else if (battVal > 238) // ~1.0V
+  else if (batt_mV > 1000) // ~1000 mV
     return 1;
   else // no battery
     return 0;
