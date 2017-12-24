@@ -70,8 +70,7 @@ int8_t day     = 0;
 int8_t month   = 0;
 int year    = 0;
 int temp    = 0;
-unsigned long lastUpdatedRtc = 0;
-unsigned long lastUpdatedTemplate = 0;
+unsigned long lastUpdated = 0;
 
 //
 // Current timer
@@ -166,8 +165,8 @@ void loop()
   }
 
   // Update state every 0.5 seconds
-  if (millis() - lastUpdatedRtc > 500) {
-    lastUpdatedRtc = millis();
+  if (millis() - lastUpdated > 500) {
+    lastUpdated = millis();
 
     // Update current time and timer
     if (currentMode == ModeClock || currentMode == ModeTimer || currentMode == ModeTimerRun) {
@@ -272,35 +271,25 @@ void updateTimerTimeout()
   }
 
   // Decrease timer counter
-  if (lastRegisteredSecond != seconds) {
-    if (timer_seconds > 0) {
-      --timer_seconds;
-      return;
-    } else if (timer_minutes > 0) {
-      --timer_minutes;
-      timer_seconds = 59;
-      return;
-    } else if (timer_hours > 0) {
-      --timer_hours;
-      timer_minutes = 59;
-      timer_seconds = 59;
-      return;
-    }
+  if (timer_seconds > 0) {
+    --timer_seconds;
+    return;
+  } else if (timer_minutes > 0) {
+    --timer_minutes;
+    timer_seconds = 59;
+    return;
+  } else if (timer_hours > 0) {
+    --timer_hours;
+    timer_minutes = 59;
+    timer_seconds = 59;
+    return;
   }
 }
 
 void showTemplate()
 {
-  if (enterSettings && millis() - lastUpdatedTemplate < 300)
-    return;
-
-  if (!enterSettings && millis() - lastUpdatedTemplate < 1000)
-    return;
-  
   if (currentMode & 0x00FF) templateShowClock();
   if (currentMode & 0xFF00) templateShowTimer();
-
-  lastUpdatedTemplate = millis();
 }
 
 void templateShowClock()
