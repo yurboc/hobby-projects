@@ -10,6 +10,25 @@
 #include "custom_symbols.h"
 
 //
+// Prototypes
+//
+void setup();
+void loop();
+void readEncoder();
+void updateByteUsingEncoderValue(int8_t &value, int8_t lower, int8_t upper);
+void updateIntUsingEncoderValue(int &value, int lower, int upper);
+void updateTimerTimeout();
+void showTemplate();
+void templateShowClock();
+void templateShowTimer();
+int nextMode();
+void hwOn(uint8_t hwPin);
+void hwOff(uint8_t hwPin);
+bool hasUsb();
+int battState();
+void systemCheck();
+
+//
 // Types
 //
 enum ModeGlobal {
@@ -36,10 +55,10 @@ RtcDS3231<TwoWire> rtc(Wire);
 const int encA   = 2;  // Encoder out A
 const int encB   = 3;  // Encoder out B
 const int encKey = 4;  // Encoder button
-const int buzzer = 12;     // Buzzer
-const int ledRed = 11;     // Red LED
-const int ledYellow = 10;  // Yellow LED
-const int ledGreen = 9;    // Green LED
+const int buzz = 12;   // Buzzer
+const int ledR = 11;   // Red LED
+const int ledY = 10;   // Yellow LED
+const int ledG = 9;    // Green LED
 
 //
 // Global state
@@ -85,6 +104,8 @@ int8_t lastRegisteredSecond = 0;
 int8_t beepTime = 0;
 int8_t timer_progress = 0;
 
+
+
 void setup()
 {
   // LCD setup
@@ -109,14 +130,7 @@ void setup()
   rtc.SetSquareWavePin(DS3231SquareWavePin_ModeNone);
 
   // GPIO setup
-  digitalWrite(buzzer,    LOW);
-  digitalWrite(ledRed,    LOW);
-  digitalWrite(ledYellow, LOW);
-  digitalWrite(ledGreen,  LOW);
-  pinMode(buzzer,    INPUT);
-  pinMode(ledRed,    INPUT);
-  pinMode(ledYellow, INPUT);
-  pinMode(ledGreen,  INPUT);
+  //   not need
 
   // Setup Timer to read encoder
   cli();
@@ -147,9 +161,9 @@ void loop()
   }
   if ((millis() - lastDebounceTime) > 50 && (currentButtonState != buttonState)) {
     if (buttonState == LOW && currentButtonState == HIGH) {
-      beepOn();
+      hwOn(buzz);
       delay(10);
-      beepOff();
+      hwOff(buzz);
       currentMode = (ModeGlobal)nextMode();
     }
     buttonState = currentButtonState;
@@ -158,9 +172,9 @@ void loop()
   // Detect button hold
   if ((millis() - lastDebounceTime) > 1500 && (currentButtonState == LOW)) {
     if (!enterSettings) {
-      beepOn();
+      hwOn(buzz);
       delay(50);
-      beepOff();
+      hwOff(buzz);
     }
     enterSettings = true;
   }
@@ -189,17 +203,17 @@ void loop()
 
         // Timer pre-alert
         if (timer_hours == 0 && timer_minutes == 0 && (timer_seconds <= 30 && timer_seconds > 0)) {
-          yellowOn();
+          hwOn(ledY);
           delay(100);
-          yellowOff();
+          hwOff(ledY);
         }
       }
 
       // Timer beep
       if (beepTime > 0 && seconds % 2 == 0) {
-        yellowOn();
-        beepOn(); delay(100); beepOff(); delay(50); beepOn(); delay(100); beepOff();
-        yellowOff();
+        hwOn(ledY);
+        hwOn(buzz); delay(100); hwOff(buzz); delay(50); hwOn(buzz); delay(100); hwOff(buzz);
+        hwOff(ledY);
 
         if (--beepTime == 0)
           currentMode = ModeTimer;
@@ -211,16 +225,16 @@ void loop()
 
     // Check health state
     if (hasUsb()) {
-      if (currentMode == ModeTimerRun) greenOn();
-      else greenOff();
+      if (currentMode == ModeTimerRun) hwOn(ledG);
+      else hwOff(ledG);
     }
     else {
-      greenOff();
+      hwOff(ledG);
       if (lcd.getBacklight()) lcd.noBacklight();
     }
 
     if (battState() == 1) {
-      redOn(); delay(50); redOff(); delay(10); redOn(); delay(50); redOff();
+      hwOn(ledR); delay(50); hwOff(ledR); delay(10); hwOn(ledR); delay(50); hwOff(ledR);
     }
 
     // Change mode
@@ -503,52 +517,16 @@ int nextMode()
 
 
 
-void beepOn()
+void hwOn(uint8_t hwPin)
 {
-  digitalWrite(buzzer, LOW);
-  pinMode(buzzer, OUTPUT);
+  digitalWrite(hwPin, LOW);
+  pinMode(hwPin, OUTPUT);
 }
 
-void beepOff()
+void hwOff(uint8_t hwPin)
 {
-  pinMode(buzzer, INPUT);
-  digitalWrite(buzzer, HIGH);
-}
-
-void redOn()
-{
-  digitalWrite(ledRed, LOW);
-  pinMode(ledRed, OUTPUT);
-}
-
-void redOff()
-{
-  pinMode(ledRed, INPUT);
-  digitalWrite(ledRed, HIGH);
-}
-
-void greenOn()
-{
-  digitalWrite(ledGreen, LOW);
-  pinMode(ledGreen, OUTPUT);
-}
-
-void greenOff()
-{
-  pinMode(ledGreen, INPUT);
-  digitalWrite(ledGreen, HIGH);
-}
-
-void yellowOn()
-{
-  digitalWrite(ledYellow, LOW);
-  pinMode(ledYellow, OUTPUT);
-}
-
-void yellowOff()
-{
-  pinMode(ledYellow, INPUT);
-  digitalWrite(ledYellow, HIGH);
+  pinMode(hwPin, INPUT);
+  digitalWrite(hwPin, HIGH);
 }
 
 bool hasUsb()
@@ -601,9 +579,9 @@ void systemCheck()
   lcd.write(4); // bukva_U
   lcd.print("K ");
   delay(100);
-  beepOn();
+  hwOn(buzz);
   delay(100);
-  beepOff();
+  hwOff(buzz);
 
   // Check LEDs
   lcd.setCursor(0, 1);
@@ -612,21 +590,21 @@ void systemCheck()
   // Red
   lcd.setCursor(0, 1);
   lcd.print(" CBET ...");
-  redOn();
+  hwOn(ledR);
   delay(350);
-  redOff();
+  hwOff(ledR);
 
   // Yellow
   lcd.print("...");
-  yellowOn();
+  hwOn(ledY);
   delay(350);
-  yellowOff();
+  hwOff(ledY);
 
   // Green
   lcd.print("...");
-  greenOn();
+  hwOn(ledG);
   delay(350);
-  greenOff();
+  hwOff(ledG);
 
   // Done
   lcd.setCursor(0, 1);
