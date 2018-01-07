@@ -61,6 +61,11 @@ const int ledY = 10;   // Yellow LED
 const int ledG = 9;    // Green LED
 
 //
+// Software definitions
+//
+const char daysOfWeek[7][2] = {{'B','C'},{'\1','H'},{'B','T'},{'C','P'},{'\2','T'},{'\1','T'},{'C','\3'}};
+
+//
 // Global state
 //
 ModeGlobal currentMode = ModeTesting;
@@ -86,6 +91,7 @@ volatile boolean PastA = 0;
 int8_t seconds = 0;
 int8_t minutes = 0;
 int8_t hours   = 0;
+int8_t dOfWeek = 0;
 int8_t day     = 0;
 int8_t month   = 0;
 int year    = 0;
@@ -113,10 +119,10 @@ void setup()
   lcd.begin();
   lcd.noBacklight();
   lcd.createChar(0, degree);
-  lcd.createChar(1, charge_damage);
-  lcd.createChar(2, charge_empty);
-  lcd.createChar(3, charge_half);
-  lcd.createChar(4, charge_full);
+  lcd.createChar(1, bukva_P);
+  lcd.createChar(2, bukva_CH);
+  lcd.createChar(3, bukva_B);
+  lcd.createChar(4, charge_empty);
   lcd.createChar(5, charge_usb);
   lcd.createChar(6, black_square);
   
@@ -190,6 +196,7 @@ void loop()
       // Update time
       RtcDateTime now = rtc.GetDateTime();
       temp    = rtc.GetTemperature().AsWholeDegrees();
+      dOfWeek = now.DayOfWeek();
       day     = now.Day();
       month   = now.Month();
       year    = now.Year();
@@ -234,6 +241,7 @@ void loop()
       if (lcd.getBacklight()) lcd.noBacklight();
     }
 
+    // Blink red LED if battery low
     if (battState() == 1) {
       hwOn(ledR); delay(50); hwOff(ledR); delay(10); hwOn(ledR); delay(50); hwOff(ledR);
     }
@@ -370,11 +378,13 @@ void templateShowClock()
     lcd.write(' ');
   }
 
-  // Line 2: [    HH:MM:SS  uc]
+  // Line 2: [DD  HH:MM:SS  uc]
   lcd.setCursor(0, 1);
-  if (hasUsb()) {
-    lcd.print("    ");
-  }
+
+  lcd.write(enterSettings ? ' ' : daysOfWeek[dOfWeek][0]);
+  lcd.write(enterSettings ? ' ' : daysOfWeek[dOfWeek][1]);
+  lcd.write(' ');
+  lcd.write(' ');
 
   if (enterSettings && currentMode != ModeSetCurrentHours) {
     lcd.write('_');
@@ -403,21 +413,14 @@ void templateShowClock()
     lcd.write('0' + seconds%10);
   }
   lcd.write(' ');
-  if (hasUsb()) lcd.write(' ');
+  lcd.write(' ');
 
   // Print battery status
   uint8_t batt = battState(); // 0 or 1..4
-  if (batt == 0) lcd.write(' '); // none
-  else lcd.write(batt); // damage/empty/half/full
+  if (batt > 0) lcd.write(4); // charge_empty
+  else lcd.write(' ');        // no battery
   if (hasUsb()) lcd.write(5); // charge_usb
-  else { // Print battery voltage
-    lcd.write('=');
-    lcd.write('0' + batt_mV/1000%10);
-    lcd.write('.');
-    lcd.write('0' + batt_mV/100%10);
-    lcd.write('0' + batt_mV/10%10);
-    lcd.write('B');
-  }
+  else lcd.write(' ');        // no usb
 }
 
 void templateShowTimer()
@@ -466,8 +469,8 @@ void templateShowTimer()
 
   // Print battery status
   uint8_t batt = battState(); // 0 or 1..4
-  if (batt == 0) lcd.write(' '); // none
-  else lcd.write(batt); // damage/empty/half/full
+  if (batt < 2) lcd.write(' '); // no battery or damaged
+  else lcd.write(4); // empty/half/full
   lcd.write(hasUsb() ? 5 : ' '); // charge_usb
 }
 
