@@ -15,8 +15,10 @@ void MainWindow::readData()
     leStatus->setText(QString("Bytes available: %1").arg(cnt));
 
     QByteArray rxData = serial->readAll();
+    //rxData.replace("\r\n","{CRLF}");
+    //rxData.replace("\r","{CR}");
+    //rxData.replace("\n","{LF}");
     ptRxData->insertPlainText(rxData);
-    //ptRxData->appendPlainText(rxData);
 }
 
 void MainWindow::on_pbConnect_clicked()
@@ -27,7 +29,7 @@ void MainWindow::on_pbConnect_clicked()
     serial->setStopBits(QSerialPort::OneStop);
     serial->setParity(QSerialPort::NoParity);
 
-    serial->open(QSerialPort::ReadWrite | QSerialPort::ExistingOnly);
+    serial->open(QSerialPort::ReadWrite);
     if (serial->isOpen()) {
         leStatus->setText("Port opened");
     }

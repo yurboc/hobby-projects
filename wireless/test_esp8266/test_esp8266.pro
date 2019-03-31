@@ -26,10 +26,14 @@ CONFIG += c++11
 
 SOURCES += \
         main.cpp \
-        mainwindow.cpp
+        mainwindow.cpp \
+    atcommandparser.cpp \
+    actions.cpp
 
 HEADERS += \
-        mainwindow.h
+        mainwindow.h \
+    atcommandparser.h \
+    actions.h
 
 FORMS += \
         mainwindow.ui
