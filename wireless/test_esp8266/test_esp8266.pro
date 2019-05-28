@@ -25,12 +25,14 @@ DEFINES += QT_DEPRECATED_WARNINGS
 CONFIG += c++11
 
 SOURCES += \
+    atcommandsender.cpp \
         main.cpp \
         mainwindow.cpp \
     atcommandparser.cpp \
     actions.cpp
 
 HEADERS += \
+    atcommandsender.h \
         mainwindow.h \
     atcommandparser.h \
     actions.h

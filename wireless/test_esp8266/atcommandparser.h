@@ -23,12 +23,17 @@ class AtCommandParser : public QObject
     Q_OBJECT
 public:
     explicit AtCommandParser(QObject *parent = nullptr);
+    void reset();
     void putData(DataItem dataItem);
-    void analyseData();
+    void setPendingCommand(QString commandName);
+
+signals:
+    void gotNewState(QString description);
 
 private:
     void parseData();
     void dropCRLF();
+    void dropBuffer();
     bool isStrEqualToBuf(const char *str, unsigned from=0);
     bool isStrInBufComplete();
 
@@ -48,8 +53,7 @@ private:
     DataItem m_rxBuffer[RX_BUFFER_SIZE];
     uint32_t m_rxIndex;
 
-    bool m_isReady;
-    bool m_isOk;
+    QString m_pendingAtCommand;
 
     ParserState m_parserState;
 };

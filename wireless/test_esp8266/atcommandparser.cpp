@@ -6,10 +6,22 @@ extern ParserAction actionTable[];
 
 AtCommandParser::AtCommandParser(QObject *parent) : QObject(parent)
 {
-    m_rxIndex = 0;
-    m_parserState = StateUnknown;
+    reset();
+}
 
+void AtCommandParser::reset()
+{
+    // Clear commands buffer
+    dropBuffer();
+
+    // Set initial parser state
     setParserState(StateWaitReady);
+
+    // Reset actions table
+    clearTable();
+
+    // Clear pending command
+    m_pendingAtCommand.clear();
 }
 
 void AtCommandParser::putData(DataItem dataItem)
@@ -22,6 +34,11 @@ void AtCommandParser::putData(DataItem dataItem)
 
     // Parse data
     parseData();
+}
+
+void AtCommandParser::setPendingCommand(QString commandName)
+{
+    m_pendingAtCommand = commandName;
 }
 
 void AtCommandParser::parseData()
@@ -37,11 +54,14 @@ void AtCommandParser::parseData()
             return;
 
         // Find "ready"
-        if (!isStrEqualToBuf(str_ready))
+        if (!isStrEqualToBuf(str_ready)) {
+            dropBuffer();
             return;
+        }
 
         // Got "ready"
         gotReady();
+        dropBuffer();
         return;
     }
 
@@ -69,6 +89,9 @@ void AtCommandParser::parseData()
 
         // Parse full string
         gotFullCommand();
+
+        // Clear buffer
+        dropBuffer();
         return;
     }
 }
@@ -80,10 +103,17 @@ void AtCommandParser::setParserState(ParserState newState)
 
 void AtCommandParser::dropCRLF()
 {
-    if (m_rxIndex == 1 && (m_rxBuffer[0] == '\r' || m_rxBuffer[0] == '\n')) {
+    if (m_rxIndex == 1
+            && (m_rxBuffer[0] == '\r' || m_rxBuffer[0] == '\n')) {
         m_rxIndex = 0;
         return;
     }
+}
+
+void AtCommandParser::dropBuffer()
+{
+    m_rxIndex = 0;
+    memset(m_rxBuffer, 0, sizeof(DataItem) * sizeof(RX_BUFFER_SIZE));
 }
 
 bool AtCommandParser::isStrEqualToBuf(const char *str, unsigned from)
@@ -105,16 +135,22 @@ bool AtCommandParser::isStrEqualToBuf(const char *str, unsigned from)
 
 bool AtCommandParser::isStrInBufComplete()
 {
-    if (m_rxIndex < 2 || m_rxBuffer[m_rxIndex-2] != '\r' || m_rxBuffer[m_rxIndex-1] != '\n')
-        return false;
+    if (m_rxIndex >= 2
+            && m_rxBuffer[m_rxIndex-2] == '\r'
+            && m_rxBuffer[m_rxIndex-1] == '\n') {
 
-    return true;
+        // Replace CR LF by terminator
+        m_rxBuffer[m_rxIndex-2] = '\0';
+        m_rxBuffer[m_rxIndex-1] = '\0';
+        return true;
+    }
+    return false;
 }
 
 void AtCommandParser::gotReady()
 {
     setParserState(StateWaitAT);
-    m_isReady = true;
+    emit gotNewState("READY");
 }
 
 void AtCommandParser::gotIpd()
@@ -134,8 +170,17 @@ void AtCommandParser::gotFullCommand()
     int hits = 0;
     updateTable(&hits);
 
-    // Reset table
-    clearTable();
+    // Handle "pending command"
+    bool gotOk = takeActionHit(ACTION_OK);
+    bool gotError = takeActionHit(ACTION_ERROR);
+    if (!m_pendingAtCommand.isEmpty()) {
+        if (gotError) {
+            emit gotNewState("!"+m_pendingAtCommand);
+        }
+        else if (gotOk) {
+            emit gotNewState(m_pendingAtCommand);
+        }
+    }
 }
 
 void AtCommandParser::updateTable(int *out_updatedEventsCount)
