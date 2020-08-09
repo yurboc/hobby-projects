@@ -1,0 +1,70 @@
+[
+    {
+        "id": "42ca883.f42d6f8",
+        "type": "tab",
+        "label": "Waterius"
+    },
+    {
+        "id": "c8fe5ca4.f78df",
+        "type": "mqtt out",
+        "z": "42ca883.f42d6f8",
+        "name": "MQTT to Domoticz",
+        "topic": "domoticz/in",
+        "qos": "",
+        "retain": "",
+        "broker": "5269d4ee.cae9bc",
+        "x": 750,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "5a6eeb4.e5d9e14",
+        "type": "mqtt in",
+        "z": "42ca883.f42d6f8",
+        "name": "MQTT from Waterius",
+        "topic": "waterius/butovohome/#",
+        "qos": "2",
+        "broker": "5269d4ee.cae9bc",
+        "x": 180,
+        "y": 100,
+        "wires": [
+            [
+                "f7b56ff1.9673d"
+            ]
+        ]
+    },
+    {
+        "id": "f7b56ff1.9673d",
+        "type": "function",
+        "z": "42ca883.f42d6f8",
+        "name": "Waterius to Domoticz",
+        "func": "var newMsg = {};\nvar payload = (+msg.payload);\nparamName = msg.topic.split(\"/\")[2];\n\nfunction setCounter(idx, val) {\n  var newPayload = '{\"idx\":' + idx +',\"svalue\":\"' + val*1000 + '\",\"nvalue\":0}';\n  return newPayload;\n}\n\nfunction setVoltage(idx, val) {\n  var newPayload = '{\"idx\":' + idx +',\"svalue\":\"' + val + '\",\"nvalue\":0}';\n  return newPayload;\n}\n\nswitch (paramName) {\n  case 'ch0':\n    newMsg.payload = setCounter(20, payload);\n    return newMsg;\n  case 'ch1':\n    newMsg.payload = setCounter(19, payload);\n    return newMsg;\n  case 'voltage':\n    newMsg.payload = setVoltage(18, payload);\n    return newMsg;\n}\n\nreturn null;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 460,
+        "y": 100,
+        "wires": [
+            [
+                "c8fe5ca4.f78df"
+            ]
+        ]
+    },
+    {
+        "id": "5269d4ee.cae9bc",
+        "type": "mqtt-broker",
+        "z": "",
+        "broker": "localhost",
+        "port": "1883",
+        "clientid": "",
+        "usetls": false,
+        "compatmode": true,
+        "keepalive": "60",
+        "cleansession": true,
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": ""
+    }
+]

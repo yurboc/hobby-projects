@@ -1,0 +1,246 @@
+[
+    {
+        "id": "3c1e3c86.2f0d2c",
+        "type": "tab",
+        "label": "LED Strip"
+    },
+    {
+        "id": "ef000c6c.55d83",
+        "type": "mqtt in",
+        "z": "3c1e3c86.2f0d2c",
+        "name": "MQTT from Domoticz",
+        "topic": "domoticz/out/#",
+        "qos": "2",
+        "broker": "5269d4ee.cae9bc",
+        "x": 180,
+        "y": 100,
+        "wires": [
+            [
+                "a5ecc6db.8a12e"
+            ]
+        ]
+    },
+    {
+        "id": "4e1a6dd7.e95134",
+        "type": "mqtt out",
+        "z": "3c1e3c86.2f0d2c",
+        "name": "MQTT to LED Strip",
+        "topic": "ledstrip/in",
+        "qos": "",
+        "retain": "",
+        "broker": "5269d4ee.cae9bc",
+        "x": 950,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "761ce3cb.e5aa04",
+        "type": "inject",
+        "z": "3c1e3c86.2f0d2c",
+        "name": "ON(8) to Domotics",
+        "topic": "",
+        "payload": "{ \"idx\" : 8, \"nvalue\" : 1 }",
+        "payloadType": "json",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "x": 650,
+        "y": 320,
+        "wires": [
+            [
+                "fdb29929.7636a"
+            ]
+        ]
+    },
+    {
+        "id": "fdb29929.7636a",
+        "type": "mqtt out",
+        "z": "3c1e3c86.2f0d2c",
+        "name": "MQTT to Domoticz",
+        "topic": "domoticz/in",
+        "qos": "",
+        "retain": "",
+        "broker": "5269d4ee.cae9bc",
+        "x": 950,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "a3b9e0a5.dd0a2",
+        "type": "inject",
+        "z": "3c1e3c86.2f0d2c",
+        "name": "OFF(8) to Domotics",
+        "topic": "",
+        "payload": "{ \"idx\" : 8, \"nvalue\" : 0 } ",
+        "payloadType": "json",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "x": 650,
+        "y": 360,
+        "wires": [
+            [
+                "fdb29929.7636a"
+            ]
+        ]
+    },
+    {
+        "id": "363ea362.9588b4",
+        "type": "mqtt in",
+        "z": "3c1e3c86.2f0d2c",
+        "name": "MQTT from LED Strip",
+        "topic": "ledstrip/out/#",
+        "qos": "2",
+        "broker": "5269d4ee.cae9bc",
+        "x": 180,
+        "y": 280,
+        "wires": [
+            [
+                "fdb29929.7636a"
+            ]
+        ]
+    },
+    {
+        "id": "d4797a73.3e08e",
+        "type": "inject",
+        "z": "3c1e3c86.2f0d2c",
+        "name": "OFF to LED Strip",
+        "topic": "",
+        "payload": "{ \"idx\" : 8, \"nvalue\" : 0 } ",
+        "payloadType": "json",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "x": 660,
+        "y": 200,
+        "wires": [
+            [
+                "4e1a6dd7.e95134"
+            ]
+        ]
+    },
+    {
+        "id": "cce52845.d17308",
+        "type": "inject",
+        "z": "3c1e3c86.2f0d2c",
+        "name": "ON to LED Strip",
+        "topic": "",
+        "payload": "{ \"idx\" : 8, \"nvalue\" : 1 } ",
+        "payloadType": "json",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "x": 660,
+        "y": 160,
+        "wires": [
+            [
+                "4e1a6dd7.e95134"
+            ]
+        ]
+    },
+    {
+        "id": "e5d6cc50.6ba2e",
+        "type": "switch",
+        "z": "3c1e3c86.2f0d2c",
+        "name": "\"Light/Switch\" или \"Color Switch\"",
+        "property": "payload.dtype",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "Light/Switch",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "Color Switch",
+                "vt": "str"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "false",
+        "outputs": 3,
+        "x": 600,
+        "y": 100,
+        "wires": [
+            [
+                "4e1a6dd7.e95134"
+            ],
+            [
+                "4e1a6dd7.e95134"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "83760bf7.d050c",
+        "type": "inject",
+        "z": "3c1e3c86.2f0d2c",
+        "name": "OFF(15) - Domotics",
+        "topic": "",
+        "payload": "{ \"idx\" : 15, \"nvalue\" : 0 } ",
+        "payloadType": "json",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "x": 650,
+        "y": 460,
+        "wires": [
+            [
+                "fdb29929.7636a"
+            ]
+        ]
+    },
+    {
+        "id": "32b0884d.51a0c8",
+        "type": "inject",
+        "z": "3c1e3c86.2f0d2c",
+        "name": "ON(15) - Domotics",
+        "topic": "",
+        "payload": "{\"Color\": { \"b\": 0, \"g\": 161, \"r\": 255 }, \"idx\": 15, \"nvalue\": 1, \"svalue\": \"75\" }",
+        "payloadType": "json",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "x": 650,
+        "y": 420,
+        "wires": [
+            [
+                "fdb29929.7636a"
+            ]
+        ]
+    },
+    {
+        "id": "a5ecc6db.8a12e",
+        "type": "json",
+        "z": "3c1e3c86.2f0d2c",
+        "name": "",
+        "x": 370,
+        "y": 100,
+        "wires": [
+            [
+                "e5d6cc50.6ba2e"
+            ]
+        ]
+    },
+    {
+        "id": "5269d4ee.cae9bc",
+        "type": "mqtt-broker",
+        "z": "",
+        "broker": "localhost",
+        "port": "1883",
+        "clientid": "",
+        "usetls": false,
+        "compatmode": true,
+        "keepalive": "60",
+        "cleansession": true,
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": ""
+    }
+]
