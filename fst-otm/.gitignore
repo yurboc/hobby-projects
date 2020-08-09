@@ -1,2 +1,11 @@
+#
+# Sensitive data
+#
 credentials.php
 FST-OTM-*.json
+
+#
+# Generated files
+#
+static_json_data.js
+static_json_data_ref.js
