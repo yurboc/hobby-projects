@@ -31,7 +31,7 @@ function getClient()
     $client->useApplicationDefaultCredentials();
     $client->setApplicationName('Google Sheets API test for FST OTM');
     $client->addScope( 'https://www.googleapis.com/auth/spreadsheets.readonly' );
-	$client->addScope( 'https://www.googleapis.com/auth/drive.readonly' );
+    $client->addScope( 'https://www.googleapis.com/auth/drive.readonly' );
     return $client;
 }
 
@@ -97,7 +97,7 @@ $start_uploading_time = microtime(true);
 $conn_id = ftp_connect($ftp_server) or die("<br/>Can't connect to $ftp_server");
 
 // Login to FTP server
-$login_result = ftp_login($conn_id, $ftp_user_name, $ftp_user_pass); 
+$login_result = ftp_login($conn_id, $ftp_user_name, $ftp_user_pass);
 
 // Enable passive mode
 ftp_pasv($conn_id, true);
