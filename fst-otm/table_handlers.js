@@ -12,7 +12,11 @@ function customFilterByDateApply(data, filterParams){
 function customFilterByDateExpire(data, filterParams){
 	//data - the data for the row being filtered
 	//filterParams - params object passed to the filter
-	return moment(data.date_expire, "DD.MM.YYYY") <= moment().add(filterParams.value, filterParams.units);
+	var expired = moment(data.date_expire, "DD.MM.YYYY") < moment();
+    var showExpired = (filterParams.value == 0) && expired;
+    var suitable = moment(data.date_expire, "DD.MM.YYYY") <= moment().add(filterParams.value, filterParams.units);
+    var showSuitable = (filterParams.value != 0) && (!expired) && suitable;
+    return showExpired || showSuitable;
 }
 
 // Применить фильтры
