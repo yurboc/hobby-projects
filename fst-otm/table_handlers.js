@@ -32,10 +32,8 @@ function applyFilters() {
         complex_filter.push({field:"club", type:"like", value:document.getElementById("find_club_str").value});
 
     // Фильтр по программе
-    if ($( "#prog" ).length) { ////////////////////////////////////////////////////////////// УДАЛИТЬ ЭТО /////////////////////////
     if (document.getElementById("prog").value != "все")
         complex_filter.push({field:"prog_type", type:"like", value:document.getElementById("prog").value});
-    }
 
     // Фильтр по виду спорта
     if (document.getElementById("sport").value != "все")
