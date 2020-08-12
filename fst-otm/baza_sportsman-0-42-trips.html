@@ -198,6 +198,7 @@ VK.Widgets.Group("vk_groups", {mode: 3}, 147961233);
 <script type="text/javascript" src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
 <script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.4.1/dist/js/tabulator.min.js"></script>
 <script type="text/javascript" src="https://momentjs.com/downloads/moment-with-locales.min.js"></script>
+<script type="text/javascript" src="https://unpkg.com/vis-timeline/standalone/umd/vis-timeline-graph2d.min.js"></script>
 
 <link rel="stylesheet" type="text/css" href="https://fst-otm.yurboc.ru/table_style.css?v=20200115" />
 <script type="text/javascript" src="https://fst-otm.yurboc.ru/static_json_data_trips.js?v=20200115"></script>
@@ -228,6 +229,7 @@ VK.Widgets.Group("vk_groups", {mode: 3}, 147961233);
 </div>
  
 <div class="table_control_box">
+ <button id="visualization_btn">Визуализация</button>
  <label for="difficulty">Планируемая к.с.:</label>
  <select name="difficulty" id="difficulty">
  <option value="все">Все</option>
@@ -265,6 +267,10 @@ VK.Widgets.Group("vk_groups", {mode: 3}, 147961233);
 
 <div>
  <div id="full-table" class="table_main_box"></div>
+</div>
+
+<div>
+ <div id="visualization"></div>
 </div>
 
 <div id="dialog_about" title="Журнал МКК ФСТ-ОТМ 2020 Москва">

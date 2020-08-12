@@ -1,5 +1,13 @@
 // Таблица с походами
 var table;
+const table_min_height = 300;
+const table_max_height = 1230;
+
+// Временная шкала
+var timeline_items = new vis.DataSet();
+var timeline_groups = new vis.DataSet();
+var timeline_options = {};
+var timeline;
 
 // Фильтр по дате начала похода
 function customFilterByDateStart(data, filterParams){
@@ -61,7 +69,7 @@ function applyFilters() {
 
     // Применение фильтров
     table.setFilter(complex_filter);
-    
+
     // Дополнительная фильтрация по категориям сложности
     if (document.getElementById("difficulty").value != "все") {
         table.addFilter(customFilterByDifficulty, {difficulty:document.getElementById("difficulty").value});
@@ -100,6 +108,15 @@ function applyFilters() {
 
     // Печать количества записей
     $('#search-results').html("Найдено записей: <strong>" + table.getDataCount(true) + "</strong>");
+
+    // Обновление графика
+    if ($('#visualization').is(":visible")) {
+        updateVisualization();
+        timeline.fit();
+    }
+
+    // Снять выделение в таблице
+    table.deselectRow();
 }
 
 // Очистить все фильтры
@@ -112,24 +129,86 @@ function doFilterClear() {
     applyFilters();
 }
 
+// Показать/скрыть визуализацию графика походов
+function toggleVisualization() {
+    if ($('#visualization').is(":visible")) {
+      // Скрыть
+      $('#visualization').hide();
+      table.setHeight(table_max_height);
+    }
+    else {
+      // Показать
+      $('#visualization').show();
+      table.setHeight(table_min_height);
+      // Обновить
+      updateVisualization();
+      timeline.fit();
+      // Снять выделение
+      table.deselectRow();
+    }
+}
+
+// Обновление визуализации графика походов
+function updateVisualization() {
+    var items = [];
+    var groups = [];
+    var groups_list = [];
+    var table_data = table.getData("active");
+
+    // Формирование элементов (походы)
+    table_data.forEach(function(item) {
+      var rowItems = {
+          id:      item.id,
+          content: item.name  + " (" + item.part_cnt + " чел.) - " + item.club + "; к.с. " + item.difficulty + "; " + item.region,
+          start:   moment(item.start_date, "DD.MM.YYYY").format(),
+          end:     moment(item.finish_date, "DD.MM.YYYY").add(1,'days').format(),
+          group:   item.sport_type
+      };
+      items.push(rowItems);
+      if (!groups_list.includes(item.sport_type)) {
+          groups_list.push(item.sport_type);
+      }
+    })
+
+    // Формирование групп (виды спорта)
+    groups_list.forEach(function(item) {
+        var groupItems = {
+          id: item,
+          content: item
+        };
+        groups.push(groupItems);
+    })
+
+    // Заполнение графика
+    timeline_groups.clear();
+    timeline_groups.add(groups);
+    timeline_items.clear();
+    timeline_items.add(items);
+    timeline.setGroups(timeline_groups);
+    timeline.setItems(timeline_items);
+
+    // Снятие выделения на графике
+    timeline.setSelection([]);
+}
 
 $( function() {
 
     // Создание объекта Tabulator на DOM элементе с идентификатором "full-table"
     table = new Tabulator("#full-table", {
-        height:1230,
+        height:table_min_height,
         data:php_data, // assign data to table
         layout:"fitData", // fit columns to width of table (optional)
+        selectable:1,
         columns:[ // Define Table Columns
-            {title:"№ п/п",                           field:"id",          width:50  },
-            {title:"№ МК",                            field:"book_id",     width:70  },
-            {title:"ФИО руководителя",                field:"name",        width:150 },
+            {title:"№<br/>п/п",                       field:"id",          width:50  },
+            {title:"№<br/>МК",                        field:"book_id",     width:70  },
+            {title:"Фамилия И.О.<br/>руководителя",   field:"name",        width:150 },
             {title:"Организация",                     field:"club",        width:150 },
-            {title:"Кол-во человек",                  field:"part_cnt",    width:50  },
-            {title:"Вид маршрута",                    field:"sport_type",  width:130 },
-            {title:"План. к.с.",                      field:"difficulty",  width:70  },
-            {title:"Туристский район",                field:"region",      width:170 },
-            {title:"План. старт",                     field:"start_date",  width:100, sorter:"date", sorterParams:{format:"DD.MM.YYYY"},
+            {title:"Кол-во<br/>человек",              field:"part_cnt",    width:50  },
+            {title:"Вид<br/>маршрута",                field:"sport_type",  width:130 },
+            {title:"План.<br/>к.с.",                  field:"difficulty",  width:70  },
+            {title:"Туристский<br/>район",            field:"region",      width:170 },
+            {title:"План.<br/>старт",                 field:"start_date",  width:100, sorter:"date", sorterParams:{format:"DD.MM.YYYY"},
                 formatter: function(cell, formatterParams){
                     var start_date_value = cell.getValue();
                     var finish_date_value = cell.getRow().getData().finish_date;
@@ -145,7 +224,7 @@ $( function() {
                     }
                 }
             },
-            {title:"План. финиш",                     field:"finish_date", width:100, sorter:"date", sorterParams:{format:"DD.MM.YYYY"},
+            {title:"План.<br/>финиш",                 field:"finish_date", width:100, sorter:"date", sorterParams:{format:"DD.MM.YYYY"},
                 formatter: function(cell, formatterParams){
                     var start_date_value = cell.getRow().getData().start_date;
                     var finish_date_value = cell.getValue();
@@ -161,9 +240,15 @@ $( function() {
                     }
                 }
             },
-            {title:"Председатель МКК",                field:"mkk_leader",  width:135 },
-            {title:"Члены МКК",                       field:"mkk_list",    width:135 },
-        ]
+            {title:"Председатель<br/>МКК",            field:"mkk_leader",  width:135 },
+            {title:"Члены<br/>МКК",                   field:"mkk_list",    width:135 },
+        ],
+        rowClick:function(e, row){
+            //e - the click event object
+            //row - row component
+            timeline.setSelection(row.getData().id);
+            timeline.focus(row.getData().id);
+        }
     });
 
     // Выбор вида спорта (тип "маршрут")
@@ -190,9 +275,11 @@ $( function() {
         }
     });
 
-    // Кнопки "Найти" и "Сброс"
+    // Кнопки "Найти", "Сброс" и "Визуализация"
     $( "#find_btn" ).button().click(applyFilters);
     $( "#clear_btn" ).button().click(doFilterClear);
+    $( "#visualization_btn" ).button().click(toggleVisualization);
+
 
     // Информация о табличке
     $( "#dialog_about" ).dialog({
@@ -224,4 +311,19 @@ $( function() {
     // Информация о датах создания и модификации
     $( "#modified_date_placeholder" ).text(modified_date);
     $( "#generated_date_placeholder" ).text(generated_date);
+
+    //
+    // Подготовка визуализации
+    //
+    const timeline_container = document.getElementById("visualization");
+    timeline = new vis.Timeline(timeline_container, timeline_items, timeline_options);
+    updateVisualization();
+    timeline.setWindow(moment().subtract(15,'days').format(), moment().add(15,'days').format());
+    timeline.on('select', function (properties) {
+      table.deselectRow();
+      if (properties.items.length) {
+        table.selectRow(properties.items[0]);
+        table.scrollToRow(properties.items[0], "top");
+      }
+    });
 });
