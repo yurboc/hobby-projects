@@ -96,7 +96,7 @@
         "y": 280,
         "wires": [
             [
-                "fdb29929.7636a"
+                "778ac81d.7084f"
             ]
         ]
     },
@@ -222,6 +222,41 @@
         "wires": [
             [
                 "e5d6cc50.6ba2e"
+            ]
+        ]
+    },
+    {
+        "id": "778ac81d.7084f",
+        "type": "json",
+        "z": "3c1e3c86.2f0d2c",
+        "name": "",
+        "x": 370,
+        "y": 280,
+        "wires": [
+            [
+                "9dabfe96.ae6f6"
+            ]
+        ]
+    },
+    {
+        "id": "9dabfe96.ae6f6",
+        "type": "switch",
+        "z": "3c1e3c86.2f0d2c",
+        "name": "Корректный idx",
+        "property": "payload.idx",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "nnull"
+            }
+        ],
+        "checkall": "true",
+        "outputs": 1,
+        "x": 540,
+        "y": 280,
+        "wires": [
+            [
+                "fdb29929.7636a"
             ]
         ]
     },
