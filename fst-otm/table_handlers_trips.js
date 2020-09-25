@@ -196,11 +196,12 @@ $( function() {
     // Создание объекта Tabulator на DOM элементе с идентификатором "full-table"
     table = new Tabulator("#full-table", {
         height:table_min_height,
+        tooltips:true,
         data:php_data, // assign data to table
         layout:"fitData", // fit columns to width of table (optional)
         selectable:1,
         columns:[ // Define Table Columns
-            {title:"№<br/>п/п",                       field:"id",          width:50  },
+            {title:"№<br/>п/п",                       field:"id",          width:50, tooltip: false},
             {title:"№<br/>МК",                        field:"book_id",     width:70  },
             {title:"Фамилия И.О.<br/>руководителя",   field:"name",        width:150 },
             {title:"Организация",                     field:"club",        width:150 },
@@ -217,7 +218,7 @@ $( function() {
                       return "<span style='color:green; font-weight:bold;'>" + start_date_value + "</span>";
                     }
                     else if((moment(start_date_value, "DD.MM.YYYY") > moment()) && (moment(start_date_value, "DD.MM.YYYY").subtract(1,'month') < moment())) {
-                      return "<span style='color:blue; font-weight:bold;'>" + start_date_value + "</span>";
+                      return "<span style='color:teal; font-weight:bold;'>" + start_date_value + "</span>";
                     }
                     else {
                       return "<span style='font-weight:bold;'>" + start_date_value + "</span>";

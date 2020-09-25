@@ -194,10 +194,10 @@ VK.Widgets.Group("vk_groups", {mode: 3}, 147961233);
 <!-- ---------- ЗДЕСЬ НАЧИНАЕТСЯ КОД ТАБЛИЦ ---------- -->
 
 <link rel="stylesheet" type="text/css" href="https://code.jquery.com/ui/1.12.0/themes/cupertino/jquery-ui.min.css">
-<link rel="stylesheet" type="text/css" href="https://unpkg.com/tabulator-tables@4.4.1/dist/css/tabulator.min.css" />
+<link rel="stylesheet" type="text/css" href="https://unpkg.com/tabulator-tables@4.8.1/dist/css/tabulator.min.css" />
 <script type="text/javascript" src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
-<script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.4.1/dist/js/tabulator.min.js"></script>
-<script type="text/javascript" src="https://momentjs.com/downloads/moment-with-locales.min.js"></script>
+<script type="text/javascript" src="https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.0/moment.min.js"></script>
 
 <link rel="stylesheet" type="text/css" href="https://fst-otm.yurboc.ru/table_style.css?v=20200115" />
 <script type="text/javascript" src="https://fst-otm.yurboc.ru/static_json_data_ref.js?v=20200115"></script>
@@ -263,7 +263,8 @@ VK.Widgets.Group("vk_groups", {mode: 3}, 147961233);
  <option value="last6month">За последние полгода</option>
  </optgroup>
  <optgroup label="По дате завершения">
- <option value="exp0month">Уже завершились</option>
+ <option value="expNo">Действующие</option>
+ <option value="expYes">Уже завершились</option>
  <option value="exp1month">Менее 4 недель</option>
  <option value="exp3month">Менее 3 месяцев</option>
  </optgroup>

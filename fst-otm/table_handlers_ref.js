@@ -13,6 +13,9 @@ function customFilterByDateExpire(data, filterParams){
     //data - the data for the row being filtered
     //filterParams - params object passed to the filter
     var expired = moment(data.date_expire, "DD.MM.YYYY") < moment();
+    if (typeof filterParams.filterExpired !== 'undefined') {
+        return (filterParams.filterExpired == 1 && expired) || (filterParams.filterExpired == 0 && !expired);
+    }
     var showExpired = (filterParams.value == 0) && expired;
     var suitable = moment(data.date_expire, "DD.MM.YYYY") <= moment().add(filterParams.value, filterParams.units);
     var showSuitable = (filterParams.value != 0) && (!expired) && suitable;
@@ -57,8 +60,11 @@ function applyFilters() {
         case "last6month":
             table.addFilter(customFilterByDateApply, {months:6});
             break;
-        case "exp0month":
-            table.addFilter(customFilterByDateExpire, {units:"days", value:0});
+        case "expNo":
+            table.addFilter(customFilterByDateExpire, {filterExpired:0});
+            break;
+        case "expYes":
+            table.addFilter(customFilterByDateExpire, {filterExpired:1});
             break;
         case "exp1month":
             table.addFilter(customFilterByDateExpire, {units:"weeks", value:4});
@@ -102,15 +108,16 @@ function doFilterClear() {
           'order_link'    => array_key_exists(16, $row) ? $row[16] : ""
 */
 
-$( function() {
 
+$( function() {
     // Создание объекта Tabulator на DOM элементе с идентификатором "full-table"
     table = new Tabulator("#full-table", {
         height:1230,
+        tooltips:true,
         data:php_data, // assign data to table
         layout:"fitData", // fit columns to width of table (optional)
         columns:[ // Define Table Columns
-            {title:"№ п/п", field:"id", width:50},
+            {title:"№ п/п", field:"id", width:50, tooltip: false},
             {title:"ФИО судьи", field:"name", width:300},
             {title:"Судейская категория", field:"rank", width:90},
             {title:"Статус действующей судейской категории", field:"rank_state", width:140},
@@ -125,27 +132,88 @@ $( function() {
                       return "<span style='color:orange; font-weight:bold;'>" + cell_value + "</span>";
                     }
                     else if(moment(cell_value, "DD.MM.YYYY") <= moment().add(3, 'months')) {
-                      return "<span style='color:blue; font-weight:bold;'>" + cell_value + "</span>";
+                      return "<span style='color:teal; font-weight:bold;'>" + cell_value + "</span>";
                     }
                     else {
                       return "<span style='font-weight:bold;'>" + cell_value + "</span>";
                     }
                 }
             },
-            {title:"Ссылка на приказ/распоряжение", field:"order_link", width:135, visible: false},
+            {title:"Ссылка на действующий приказ", field:"order_link", width:135, visible: false},
+            {title:"Ссылка на действующее подтверждение", field:"confirm_link", width:135, visible: false},
+            {title:"Ссылка на действующий приказ/подтверждение", field:"primary_link", width:135, visible: false},
             {title:"Номер приказа/распоряжения", width:100, field:"order_no",
                 formatter: function(cell, formatterParams){
                     var order_no_value = cell.getRow().getData().order_no;
-                    var order_link_value = cell.getRow().getData().order_link;
-                    if (order_link_value.startsWith("http")) {
+                    var primary_link_value = cell.getRow().getData().primary_link;
+                    if (primary_link_value.startsWith("http")) {
                         if (order_no_value == "") {
                             order_no_value = "ссылка";
                         }
-                        return "<a target='_blank' href='" + order_link_value + "'>" + order_no_value + "</a>";
+                        return "<i class='ui-icon ui-icon-extlink'></i> <a style='color:blue' target='_blank' href='" + primary_link_value + "'>" + order_no_value + "</a>";
                     }
                     else {
-                        return order_no_value;
+                        return (order_no_value == "") ? "" : "<i class='ui-icon ui-icon-document'></i> " + order_no_value;
                     }
+                },
+                tooltip: function(cell){
+                    //function should return a string for the tooltip of false to hide the tooltip
+                    //return cell.getColumn().getField() + " - " + cell.getValue(); //return cells "field - value";
+                    var order_no_value = cell.getRow().getData().order_no;
+                    var order_link_value = cell.getRow().getData().order_link;
+                    var confirm_link_value = cell.getRow().getData().confirm_link;
+                    var tooltip_text = "Номер: ";
+                    tooltip_text += (order_no_value == "") ? "отсутствует" : order_no_value;
+                    if (order_link_value.startsWith("http")) {
+                        tooltip_text += "\nСсылка на приказ: " + order_link_value;
+                    }
+                    if (confirm_link_value.startsWith("http")) {
+                        tooltip_text += "\nСсылка на подтверждение: " + confirm_link_value;
+                    }
+                    if (!order_link_value.startsWith("http") && !confirm_link_value.startsWith("http")) {
+                        //return false; // можно вообще не показывать меню
+                        tooltip_text += "\nСсылки отсутствуют";
+                    }
+                    return tooltip_text;
+                },
+                contextMenu: function(component, e){
+                    //component - column/cell/row component that triggered the menu
+                    //e - click event object
+                    var menu = [];
+                    var order_link_value = component.getRow().getData().order_link;
+                    var confirm_link_value = component.getRow().getData().confirm_link;
+                    if (order_link_value.startsWith("http")) {
+                        menu.push({
+                            label:"<i class='ui-icon ui-icon-script'></i> Открыть приказ",
+                            action:function(e, column){
+                                var win = window.open(order_link_value, '_blank');
+                                win.focus();
+                            }
+                        })
+                    }
+                    if (confirm_link_value.startsWith("http")) {
+                        menu.push({
+                            label:"<i class='ui-icon ui-icon-check'></i> Открыть подтверждение",
+                            action:function(e, column){
+                                var win = window.open(confirm_link_value, '_blank');
+                                win.focus();
+                            }
+                        })
+                    }
+                    if (!order_link_value.startsWith("http") && !confirm_link_value.startsWith("http")) {
+                        menu.push({
+                            label:"<i class='ui-icon ui-icon-notice'></i> Отсутствуют ссылки на приказы",
+                            disabled:true
+                        })
+                    }
+                    menu.push({
+                        separator:true,
+                    });
+                    menu.push({
+                        label:"<i class='ui-icon ui-icon-close'></i> Закрыть",
+                        action:function(e, column){}
+                    });
+                    return menu;
                 }
             },
             {title:"дистанция", field:"dist_type", width:170},

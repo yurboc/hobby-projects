@@ -12,4 +12,11 @@ $ftp_user_pass = "user_password";
 // +------------------------+
 $googleAccountKeyFilePath = __DIR__ . '/FST-OTM.default.json';
 
+// +--------------------------+
+// |  Доступ к Telegram API   |
+// +--------------------------+
+$telegramBotToken = '000000000:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+$telegramApiUrl = 'https://api.telegram.org/bot'.$telegramBotToken.'/';
+$telegramChatId = '000000000';
+
 ?>

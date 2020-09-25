@@ -1,8 +1,15 @@
 <?php
 $start_time = microtime(true);
+echo "Begin generation: ".date(DATE_RFC822);
 
-require __DIR__ . '/credentials.php';
+require __DIR__ . '/../src/credentials.php';
+require __DIR__ . '/../src/telegram_api.php';
 require __DIR__ . '/vendor/autoload.php';
+
+// +-------------------+
+// |  Main definitions |
+// +-------------------+
+$generator_name = "Судьи";
 
 // +-------------------+
 // |  Results path     |
@@ -14,7 +21,7 @@ $remote_file = "/www/fst-otm.yurboc.ru/static_json_data_ref.js";
 // |  Identifiers      |
 // +-------------------+
 $spreadsheetId = '1CnEQgYXVq-dXrgcSGr-BmnaQ7LsKDSK4gNXbjF7WRSg';
-$range = '(судьи Москвы)!A2:O';
+$range = '(судьи Москвы)!A2:Q';
 
 // +------------------------+
 // |  Access to Google API  |
@@ -67,7 +74,9 @@ if (empty($values)) {
           'qual_date'      => array_key_exists(11, $row) ? $row[11] : "",
           'statement_link' => array_key_exists(12, $row) ? $row[12] : "",
           'req_app_date'   => array_key_exists(13, $row) ? $row[13] : "",
-          'order_link'     => array_key_exists(14, $row) ? $row[14] : ""
+          'primary_link'   => array_key_exists(14, $row) ? $row[14] : "",
+          'order_link'     => array_key_exists(15, $row) ? $row[15] : "",
+          'confirm_link'   => array_key_exists(16, $row) ? $row[16] : "",
           ));
     }
 }
@@ -89,7 +98,7 @@ file_put_contents($json_output_file, $result_string);
 // Profiling file generation
 $end_time = microtime(true);
 $execution_time = ($end_time - $start_time)*1000;
-echo "Generated in ".number_format($execution_time, 2, ',', '')." ms";
+echo "<br/>Generated in ".number_format($execution_time, 2, ',', '')." ms";
 
 // -------------------------------
 //  Upload JavaScript file to FTP
@@ -111,6 +120,7 @@ if (ftp_put($conn_id, $remote_file, $json_output_file, FTP_ASCII)) {
     echo "<br/>File $json_output_file successfully uploaded!";
 } else {
     echo "<br/>Can't upload file $json_output_file to server!";
+    notifySendFail($generator_name, "сбой загрузки по FTP");
 }
 
 // Close connection
@@ -121,5 +131,10 @@ $end_time = microtime(true);
 $execution_time = ($end_time - $start_time)*1000;
 $uploading_time = ($end_time - $start_uploading_time)*1000;
 echo "<br/>Done in ".number_format($execution_time, 2, ',', '')." ms (upload ".number_format($uploading_time, 2, ',', '')." ms)";
+
+// Send notification to Telegram
+if(!isset($_GET["notify"]) || $_GET["notify"] !== "none") {
+    notifySendDone($generator_name, $execution_time);
+}
 
 ?>
