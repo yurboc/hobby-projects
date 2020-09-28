@@ -77,7 +77,7 @@ function applyFilters() {
     }
 
     // Печать количества записей
-    $('#search-results').html("Найдено записей: <strong>" + table.getDataCount(true) + "</strong>");
+    $('#search-results').html("Найдено записей: <strong>" + table.getDataCount('active') + "</strong>");
 }
 
 // Очистить все фильтры
@@ -119,6 +119,20 @@ $( function() {
                     else {
                         return (order_no_value == "") ? "" : "<i class='ui-icon ui-icon-document'></i> " + order_no_value;
                     }
+                },
+                tooltip: function(cell){
+                    //function should return a string for the tooltip of false to hide the tooltip
+                    //return cell.getColumn().getField() + " - " + cell.getValue(); //return cells "field - value";
+                    var order_no_value = cell.getRow().getData().order_no;
+                    var order_link_value = cell.getRow().getData().order_link;
+                    var tooltip_text = (order_no_value == "") ? "Номер отсутствует" : order_no_value;
+                    if (order_link_value.startsWith("http")) {
+                        tooltip_text += "\nСсылка: " + order_link_value;
+                    }
+                    else if (order_link_value != "") {
+                        tooltip_text += "\nИнфо: " + order_link_value;
+                    }
+                    return tooltip_text;
                 }
             },
             {title:"статус разряда/ звания", field:"rank_state", width:120},
@@ -139,9 +153,9 @@ $( function() {
                     }
                 }
             },
-            {title:"ссылка на приказ/распоряжение", field:"order_link", width:135, visible: false},
             {title:"дистанция/ маршрут", field:"prog_type", width:100},
             {title:"вид", field:"sport_type", width:130},
+            {title:"ссылка на приказ/распоряжение", field:"order_link", width:135, visible: false, download: true},
         ]
     });
 
@@ -206,6 +220,11 @@ $( function() {
         showLabel: false
       } ).click(function() {
         $('#dialog_about').dialog('open');
+    });
+
+    // Кнопка "Экспорт в XLSX"
+    $("#xlsx_btn").button().click(function(){
+        table.download("xlsx", "sportsmen.xlsx", {sheetName:"Спортсмены"});
     });
 
     // Информация о датах создания и модификации

@@ -75,7 +75,7 @@ function applyFilters() {
     }
 
     // Печать количества записей
-    $('#search-results').html("Найдено записей: <strong>" + table.getDataCount(true) + "</strong>");
+    $('#search-results').html("Найдено записей: <strong>" + table.getDataCount('active') + "</strong>");
 }
 
 // Очистить все фильтры
@@ -139,9 +139,6 @@ $( function() {
                     }
                 }
             },
-            {title:"Ссылка на действующий приказ", field:"order_link", width:135, visible: false},
-            {title:"Ссылка на действующее подтверждение", field:"confirm_link", width:135, visible: false},
-            {title:"Ссылка на действующий приказ/подтверждение", field:"primary_link", width:135, visible: false},
             {title:"Номер приказа/распоряжения", width:100, field:"order_no",
                 formatter: function(cell, formatterParams){
                     var order_no_value = cell.getRow().getData().order_no;
@@ -218,6 +215,9 @@ $( function() {
             },
             {title:"дистанция", field:"dist_type", width:170},
             {title:"маршрут", field:"route_type", width:170},
+            {title:"Ссылка на действующий приказ/подтверждение", field:"primary_link", width:135, visible: false, download: true},
+            {title:"Ссылка на действующий приказ", field:"order_link", width:135, visible: false, download: true},
+            {title:"Ссылка на действующее подтверждение", field:"confirm_link", width:135, visible: false, download: true},
         ]
     });
 
@@ -282,6 +282,11 @@ $( function() {
         showLabel: false
       } ).click(function() {
         $('#dialog_about').dialog('open');
+    });
+
+    // Кнопка "Экспорт в XLSX"
+    $("#xlsx_btn").button().click(function(){
+        table.download("xlsx", "referees.xlsx", {sheetName:"Спортивные судьи"});
     });
 
     // Информация о датах создания и модификации

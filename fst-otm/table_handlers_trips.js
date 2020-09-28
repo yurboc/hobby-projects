@@ -107,7 +107,7 @@ function applyFilters() {
     }
 
     // Печать количества записей
-    $('#search-results').html("Найдено записей: <strong>" + table.getDataCount(true) + "</strong>");
+    $('#search-results').html("Найдено записей: <strong>" + table.getDataCount('active') + "</strong>");
 
     // Обновление графика
     if ($('#visualization').is(":visible")) {
