@@ -25,26 +25,33 @@ function customFilterByDateExpire(data, filterParams){
 // Применить фильтры
 function applyFilters() {
     var complex_filter = [];
+    var new_url_data = {};
 
     // Фильтр по имени
-    if (document.getElementById("find_name_str").value != "")
+    if (document.getElementById("find_name_str").value != "") {
         complex_filter.push({field:"name", type:"like", value:document.getElementById("find_name_str").value});
+        new_url_data["find_name_str"] = document.getElementById("find_name_str").value;
+    }
 
     // Фильтр по виду "дистанция"
     if (document.getElementById("dist_sport").value != "все") {
         complex_filter.push({field:"dist_type", type:"like", value:document.getElementById("dist_sport").value});
         complex_filter.push({field:"dist_type", type:"!=", value:""});
+        new_url_data["dist_sport"] = document.getElementById("dist_sport").value;
     }
 
     // Фильтр по виду "маршрут"
     if (document.getElementById("route_sport").value != "все") {
         complex_filter.push({field:"route_type", type:"like", value:document.getElementById("route_sport").value});
         complex_filter.push({field:"route_type", type:"!=", value:""});
+        new_url_data["route_sport"] = document.getElementById("route_sport").value;
     }
 
     // Фильтр по званиям
-    if (document.getElementById("rank").value != "все")
+    if (document.getElementById("rank").value != "все") {
         complex_filter.push({field:"rank", type:"=", value:document.getElementById("rank").value});
+        new_url_data["rank"] = document.getElementById("rank").value;
+    }
 
     // Применение фильтров
     table.setFilter(complex_filter);
@@ -73,9 +80,16 @@ function applyFilters() {
             table.addFilter(customFilterByDateExpire, {units:"months", value:3});
             break;
     }
+    if ($('#date').val() != "все") {
+        new_url_data["date"] = $('#date').val();
+    }
 
     // Печать количества записей
     $('#search-results').html("Найдено записей: <strong>" + table.getDataCount('active') + "</strong>");
+
+    // Обновление строки URL
+    const searchParams = new URLSearchParams(new_url_data);
+    history.replaceState(null, document.title, window.location.pathname + (Object.keys(new_url_data).length ? "?" : "") + searchParams)
 }
 
 // Очистить все фильтры
@@ -220,6 +234,15 @@ $( function() {
             {title:"Ссылка на действующее подтверждение", field:"confirm_link", width:135, visible: false, download: true},
         ]
     });
+
+    // Применение URL-параметров
+    if (window.location.search.length) {
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.forEach(function(value, key) {
+            $("#"+key).val(value);
+        });
+        applyFilters();
+    }
 
     // Выбор вида программы "дистанция"
     $( "#dist_sport" ).selectmenu({

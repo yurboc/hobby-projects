@@ -54,18 +54,25 @@ function customFilterByDifficulty(data, filterParams){
 // Применить фильтры
 function applyFilters() {
     var complex_filter = [];
+    var new_url_data = {};
 
     // Фильтр по имени
-    if (document.getElementById("find_name_str").value != "")
+    if (document.getElementById("find_name_str").value != "") {
         complex_filter.push({field:"name", type:"like", value:document.getElementById("find_name_str").value});
+        new_url_data["find_name_str"] = document.getElementById("find_name_str").value;
+    }
 
     // Фильтр по клубу
-    if (document.getElementById("find_club_str").value != "")
+    if (document.getElementById("find_club_str").value != "") {
         complex_filter.push({field:"club", type:"like", value:document.getElementById("find_club_str").value});
+        new_url_data["find_club_str"] = document.getElementById("find_club_str").value;
+    }
 
     // Фильтр по виду спорта (тип "маршрут")
-    if (document.getElementById("sport_type").value != "все")
+    if (document.getElementById("sport_type").value != "все") {
         complex_filter.push({field:"sport_type", type:"like", value:document.getElementById("sport_type").value});
+        new_url_data["sport_type"] = document.getElementById("sport_type").value;
+    }
 
     // Применение фильтров
     table.setFilter(complex_filter);
@@ -73,6 +80,7 @@ function applyFilters() {
     // Дополнительная фильтрация по категориям сложности
     if (document.getElementById("difficulty").value != "все") {
         table.addFilter(customFilterByDifficulty, {difficulty:document.getElementById("difficulty").value});
+        new_url_data["difficulty"] = document.getElementById("difficulty").value;
     }
 
     // Дополнительная фильтрация по датам
@@ -105,6 +113,9 @@ function applyFilters() {
             table.addFilter(customFilterByDateFinish, {units:"months", value:6});
             break;
     }
+    if ($('#date').val() != "все") {
+        new_url_data["date"] = $('#date').val();
+    }
 
     // Печать количества записей
     $('#search-results').html("Найдено записей: <strong>" + table.getDataCount('active') + "</strong>");
@@ -117,6 +128,10 @@ function applyFilters() {
 
     // Снять выделение в таблице
     table.deselectRow();
+
+    // Обновление строки URL
+    const searchParams = new URLSearchParams(new_url_data);
+    history.replaceState(null, document.title, window.location.pathname + (Object.keys(new_url_data).length ? "?" : "") + searchParams)
 }
 
 // Очистить все фильтры
@@ -252,6 +267,14 @@ $( function() {
         }
     });
 
+    // Применение URL-параметров
+    if (window.location.search.length) {
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.forEach(function(value, key) {
+            $("#"+key).val(value);
+        });
+    }
+
     // Выбор вида спорта (тип "маршрут")
     $( "#sport_type" ).selectmenu({
         change: function( event, data ) {
@@ -327,4 +350,9 @@ $( function() {
         table.scrollToRow(properties.items[0], "top");
       }
     });
+
+    // Обновление при наличии URL-параметров
+    if (window.location.search.length) {
+      applyFilters();
+    }
 });

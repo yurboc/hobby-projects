@@ -25,28 +25,41 @@ function customFilterByDateExpire(data, filterParams){
 // Применить фильтры
 function applyFilters() {
     var complex_filter = [];
+    var new_url_data = {};
 
     // Фильтр по имени
-    if (document.getElementById("find_name_str").value != "")
+    if (document.getElementById("find_name_str").value != "") {
         complex_filter.push({field:"name", type:"like", value:document.getElementById("find_name_str").value});
+        new_url_data["find_name_str"] = document.getElementById("find_name_str").value;
+    }
 
     // Фильтр по клубу
-    if (document.getElementById("find_club_str").value != "")
+    if (document.getElementById("find_club_str").value != "") {
         complex_filter.push({field:"club", type:"like", value:document.getElementById("find_club_str").value});
+        new_url_data["find_club_str"] = document.getElementById("find_club_str").value;
+    }
 
     // Фильтр по программе
-    if (document.getElementById("prog").value != "все")
+    if (document.getElementById("prog").value != "все") {
         complex_filter.push({field:"prog_type", type:"like", value:document.getElementById("prog").value});
+        new_url_data["prog"] = document.getElementById("prog").value;
+    }
 
     // Фильтр по виду спорта
-    if (document.getElementById("sport").value != "все")
+    if (document.getElementById("sport").value != "все") {
         complex_filter.push({field:"sport_type", type:"like", value:document.getElementById("sport").value});
+        new_url_data["sport"] = document.getElementById("sport").value;
+    }
 
     // Фильтр по разрядам
-    if (document.getElementById("rank").value == "Юношеские")
+    if (document.getElementById("rank").value == "Юношеские") {
         complex_filter.push({field:"rank", type:"like", value:"ю разряд"});
-    else if (document.getElementById("rank").value != "все")
+        new_url_data["rank"] = document.getElementById("rank").value;
+    }
+    else if (document.getElementById("rank").value != "все") {
         complex_filter.push({field:"rank", type:"=", value:document.getElementById("rank").value});
+        new_url_data["rank"] = document.getElementById("rank").value;
+    }
 
     // Применение фильтров
     table.setFilter(complex_filter);
@@ -75,9 +88,16 @@ function applyFilters() {
             table.addFilter(customFilterByDateExpire, {units:"months", value:3});
             break;
     }
+    if ($('#date').val() != "все") {
+        new_url_data["date"] = $('#date').val();
+    }
 
     // Печать количества записей
     $('#search-results').html("Найдено записей: <strong>" + table.getDataCount('active') + "</strong>");
+
+    // Обновление строки URL
+    const searchParams = new URLSearchParams(new_url_data);
+    history.replaceState(null, document.title, window.location.pathname + (Object.keys(new_url_data).length ? "?" : "") + searchParams)
 }
 
 // Очистить все фильтры
@@ -158,6 +178,15 @@ $( function() {
             {title:"ссылка на приказ/распоряжение", field:"order_link", width:135, visible: false, download: true},
         ]
     });
+
+    // Применение URL-параметров
+    if (window.location.search.length) {
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.forEach(function(value, key) {
+            $("#"+key).val(value);
+        });
+        applyFilters();
+    }
 
     // Выбор программы дистанция/маршрут
     $( "#prog" ).selectmenu({
