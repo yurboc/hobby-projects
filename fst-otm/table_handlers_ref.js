@@ -35,15 +35,31 @@ function applyFilters() {
 
     // Фильтр по виду "дистанция"
     if (document.getElementById("dist_sport").value != "все") {
-        complex_filter.push({field:"dist_type", type:"like", value:document.getElementById("dist_sport").value});
-        complex_filter.push({field:"dist_type", type:"!=", value:""});
+        if (document.getElementById("dist_sport").value == "отс") {
+            complex_filter.push({field:"dist_type", type:"=", value:""});
+        }
+        else if (document.getElementById("dist_sport").value == "име") {
+            complex_filter.push({field:"dist_type", type:"!=", value:""});
+        }
+        else {
+            complex_filter.push({field:"dist_type", type:"like", value:document.getElementById("dist_sport").value});
+            complex_filter.push({field:"dist_type", type:"!=", value:""});
+        }
         new_url_data["dist_sport"] = document.getElementById("dist_sport").value;
     }
 
     // Фильтр по виду "маршрут"
     if (document.getElementById("route_sport").value != "все") {
-        complex_filter.push({field:"route_type", type:"like", value:document.getElementById("route_sport").value});
-        complex_filter.push({field:"route_type", type:"!=", value:""});
+        if (document.getElementById("route_sport").value == "отс") {
+            complex_filter.push({field:"route_type", type:"=", value:""});
+        }
+        else if (document.getElementById("route_sport").value == "име") {
+            complex_filter.push({field:"route_type", type:"!=", value:""});
+        }
+        else {
+            complex_filter.push({field:"route_type", type:"like", value:document.getElementById("route_sport").value});
+            complex_filter.push({field:"route_type", type:"!=", value:""});
+        }
         new_url_data["route_sport"] = document.getElementById("route_sport").value;
     }
 
