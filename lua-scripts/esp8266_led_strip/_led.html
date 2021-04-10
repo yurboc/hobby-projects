@@ -1,0 +1,46 @@
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+<!DOCTYPE HTML>
+
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>ESP8266 Light control</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jscolor/2.0.4/jscolor.min.js"></script>
+</head>
+
+<body bgcolor='#E6E6E6'>
+<div class="container">
+	<div class="row">
+		<h1>ESP8266 Light control</h1>
+	</div>
+	<div class="row">
+		<h2>Solid</h2>
+		<a href='?mode=html&color=FF0000'><button>R</button></a>&nbsp;
+		<a href='?mode=html&color=00FF00'><button>G</button></a>&nbsp;
+		<a href='?mode=html&color=0000FF'><button>B</button></a>&nbsp;
+		<a href='?mode=html&color=FFFFFF'><button>W</button></a>&nbsp;
+		<a href='?mode=html&color=000000'><button>OFF</button></a>
+	</div>
+	<div class="row">
+		<h2>Shift</h2>
+		<a href='?mode=html&color=FFFFFF&anim=sr&delay=30'><button>R</button></a>&nbsp;
+		<a href='?mode=html&color=FFFFFF&anim=sl&delay=30'><button>L</button></a>
+	</div>
+	<div class="row">
+		<h2>Get</h2>
+		<a href='?values=1'><button>1</button></a>&nbsp;
+		<a href='?values=117'><button>117</button></a>
+	</div>
+	<div class="row">
+		<h2>Select</h2>
+		<script>function update(picker) {$.get("?color="+picker.toString());}</script>
+		<input class="jscolor {width:300, height:200, uppercase:true}" onchange="update(this.jscolor)" id="rgb" value="000000">
+	</div>
+</body>
+</html>
