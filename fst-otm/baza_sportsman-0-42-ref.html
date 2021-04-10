@@ -200,17 +200,35 @@ VK.Widgets.Group("vk_groups", {mode: 3}, 147961233);
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.0/moment.min.js"></script>
 <script type="text/javascript" src="https://oss.sheetjs.com/sheetjs/xlsx.full.min.js"></script>
 
-<link rel="stylesheet" type="text/css" href="https://fst-otm.yurboc.ru/table_style.css?v=20200115" />
-<script type="text/javascript" src="https://fst-otm.yurboc.ru/static_json_data_ref.js?v=20200115"></script>
-<script type="text/javascript" src="https://fst-otm.yurboc.ru/table_handlers_ref.js?v=20200115"></script>
+<link rel="stylesheet" type="text/css" href="https://fst-otm.yurboc.ru/table_style.css?v=20200410" />
+<script type="text/javascript" src="https://fst-otm.yurboc.ru/static_json_data_ref.js?v=20200410"></script>
+<script type="text/javascript" src="https://fst-otm.yurboc.ru/table_handlers_ref.js?v=20200410"></script>
 
 <div class="table_control_box">
  <label for="find_name_str">Поиск: по ФИО:</label>
  <input type="text" id="find_name_str" onkeyup="applyFilters();">
+ <label for="find_region_str">по региону:</label>
+ <input type="text" id="find_region_str" onkeyup="applyFilters();">
  <button id="find_btn">Найти</button>
  <button id="clear_btn">Сброс</button>
  <button id="show_info_btn">Информация</button>
 
+ <label for="rank">Категория:</label>
+ <select name="rank" id="rank">
+ <option value="все">Все</option>
+ <option value="б/к">б/к</option>
+ <optgroup label="Категории">
+ <option value="СС3К">СС3К</option>
+ <option value="СС2К">СС2К</option>
+ <option value="СС1К">СС1К</option>
+ <option value="ССВК">ССВК</option>
+ <option value="ЮС">ЮС</option>
+ <option value="СВК/СРК">СВК/СРК</option>
+ </optgroup>
+ </select>
+</div>
+
+<div class="table_control_box">
  <label for="dist_sport">Вид "дистанция":</label>
  <select name="dist_sport" id="dist_sport">
  <option value="все" selected="selected">Все виды</option>
@@ -229,7 +247,7 @@ VK.Widgets.Group("vk_groups", {mode: 3}, 147961233);
  <option value="сек">Секретариат</option>
  </optgroup>
  </select>
- 
+
  <label for="route_sport">Вид "маршрут":</label>
  <select name="route_sport" id="route_sport">
  <option value="все" selected="selected">Все виды</option>
@@ -246,22 +264,6 @@ VK.Widgets.Group("vk_groups", {mode: 3}, 147961233);
  <option value="авт">Авто-мото</option>
  <option value="сев">Северная ходьба</option>
  <option value="сек">Секретариат</option>
- </optgroup>
- </select>
-</div>
- 
-<div class="table_control_box">
- <label for="rank">Категория:</label>
- <select name="rank" id="rank">
- <option value="все">Все</option>
- <option value="б/к">б/к</option>
- <optgroup label="Категории">
- <option value="СС3К">СС3К</option>
- <option value="СС2К">СС2К</option>
- <option value="СС1К">СС1К</option>
- <option value="ССВК">ССВК</option>
- <option value="ЮС">ЮС</option>
- <option value="СВК/СРК">СВК/СРК</option>
  </optgroup>
  </select>
 

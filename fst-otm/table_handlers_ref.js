@@ -33,6 +33,12 @@ function applyFilters() {
         new_url_data["find_name_str"] = document.getElementById("find_name_str").value;
     }
 
+    // Фильтр по региону
+    if (document.getElementById("find_region_str").value != "") {
+        complex_filter.push({field:"region", type:"like", value:document.getElementById("find_region_str").value});
+        new_url_data["find_region_str"] = document.getElementById("find_region_str").value;
+    }
+
     // Фильтр по виду "дистанция"
     if (document.getElementById("dist_sport").value != "все") {
         if (document.getElementById("dist_sport").value == "отс") {
@@ -111,6 +117,7 @@ function applyFilters() {
 // Очистить все фильтры
 function doFilterClear() {
     $('#find_name_str').val('');
+    $('#find_region_str').val('');
     $('#dist_sport').val('все').selectmenu('refresh');
     $('#route_sport').val('все').selectmenu('refresh');
     $('#rank').val('все').selectmenu('refresh');
@@ -149,8 +156,9 @@ $( function() {
         columns:[ // Define Table Columns
             {title:"№ п/п", field:"id", width:50, tooltip: false},
             {title:"ФИО судьи", field:"name", width:300},
-            {title:"Судейская категория", field:"rank", width:90},
-            {title:"Статус действующей судейской категории", field:"rank_state", width:140},
+            {title:"Регион", field:"region", width:100},
+            {title:"Судейская категория", field:"rank", width:80},
+            {title:"Статус действующей судейской категории", field:"rank_state", width:130},
             {title:"Дата присвоения/подтверждения", field:"date_apply", width:100, sorter:"date", sorterParams:{format:"DD.MM.YYYY"}},
             {title:"Дата, до которой действует категория", field:"date_expire", width:110, sorter:"date", sorterParams:{format:"DD.MM.YYYY"},
                 formatter: function(cell, formatterParams){
@@ -243,8 +251,8 @@ $( function() {
                     return menu;
                 }
             },
-            {title:"дистанция", field:"dist_type", width:170},
-            {title:"маршрут", field:"route_type", width:170},
+            {title:"дистанция", field:"dist_type", width:130},
+            {title:"маршрут", field:"route_type", width:130},
             {title:"Ссылка на действующий приказ/подтверждение", field:"primary_link", width:135, visible: false, download: true},
             {title:"Ссылка на действующий приказ", field:"order_link", width:135, visible: false, download: true},
             {title:"Ссылка на действующее подтверждение", field:"confirm_link", width:135, visible: false, download: true},
