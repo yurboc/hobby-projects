@@ -1,6 +1,22 @@
 // Таблица со спортивными разрядами
 var table;
 
+// Расцветка ячеек по значению
+var cellColors = {
+    'Всего на рассмотрении'            : null,
+    'на рассмотрении в Москомспорте'   : null,
+    'документы на присвоении в ЦСТиСК' : "#ff9900",
+    'на рассмотрении'                  : null,
+    'представления на оформлении'      : "#e0f7fa",
+    'разрядные книжки на оформлении, разряд присвоен' : "#e0f7fa",
+    'документы готовы к выдаче'        : "#ffff00",
+    'отказано в присвоении'            : null,
+    'нужен скан разрядной книжки'      : "#ff00ff",
+    'возврат на доработку'             : null,
+    'проверка КС'                      : null,
+    'на рассмотрении в Минспорте РФ'   : "#00ff00"
+}
+
 // Применить фильтры
 function applyFilters() {
     var complex_filter = [];
@@ -10,6 +26,28 @@ function applyFilters() {
     if (document.getElementById("find_name_str").value != "") {
         complex_filter.push({field:"name", type:"like", value:document.getElementById("find_name_str").value});
         new_url_data["find_name_str"] = document.getElementById("find_name_str").value;
+    }
+
+    // Фильтр по дисциплине (по программе)
+    if (document.getElementById("prog").value != "все") {
+        complex_filter.push({field:"prog_type", type:"like", value:document.getElementById("prog").value});
+        new_url_data["prog"] = document.getElementById("prog").value;
+    }
+
+    // Фильтр по разрядам
+    if (document.getElementById("rank").value == "Юношеские") {
+        complex_filter.push({field:"rank", type:"like", value:"ю разряд"});
+        new_url_data["rank"] = document.getElementById("rank").value;
+    }
+    else if (document.getElementById("rank").value != "все") {
+        complex_filter.push({field:"rank", type:"=", value:document.getElementById("rank").value});
+        new_url_data["rank"] = document.getElementById("rank").value;
+    }
+
+    // Фильтр по статусам рассмотения
+    if (document.getElementById("review_state").value != "все") {
+        complex_filter.push({field:"review_state", type:"=", value:document.getElementById("review_state").value});
+        new_url_data["review_state"] = document.getElementById("review_state").value;
     }
 
     // Применение фильтров
@@ -26,7 +64,47 @@ function applyFilters() {
 // Очистить все фильтры
 function doFilterClear() {
     $('#find_name_str').val('');
+    $('#prog').val('все').selectmenu('refresh');
+    $('#rank').val('все').selectmenu('refresh');
+    $('#review_state').val('все').selectmenu('refresh');
     applyFilters();
+}
+
+// Подсчёт статистики
+function calculateStat() {
+    var outData = "";
+    var states = {
+        'Всего на рассмотрении' : 0,
+        'на рассмотрении в Москомспорте' : 0,
+        'документы на присвоении в ЦСТиСК' : 0,
+        'на рассмотрении' : 0,
+        'представления на оформлении' : 0,
+        'разрядные книжки на оформлении, разряд присвоен' : 0,
+        'документы готовы к выдаче' : 0,
+        'отказано в присвоении' : 0,
+        'нужен скан разрядной книжки' : 0,
+        'возврат на доработку' : 0,
+        'проверка КС' : 0,
+        'на рассмотрении в Минспорте РФ' : 0
+    };
+    php_data.forEach(function(item, i, arr) {
+        states['Всего на рассмотрении'] += 1;
+        states[item['review_state']] = ((typeof states[item['review_state']] !== 'undefined')) ? (states[item['review_state']] + 1) : 1;
+    });
+    outData += "<table border=1 cellspacing=0 cellpadding=5 width=475>";
+    Object.keys(states).forEach(function(item, i, arr) {
+        cellColor = cellColors[item];
+        outData += "<tr><td align=center>" + states[item] + "</td>";
+        if (typeof cellColor !== 'undefined' && cellColor != null) {
+            outData += "<td bgcolor='" + cellColor + "'>" + item + "</td>";
+        }
+        else {
+            outData += "<td>" + item + "</td>";
+        }
+        outData += "</tr>";
+    });
+    outData += "</table>";
+    $("#stat_placeholder").html(outData);
 }
 
 /*
@@ -41,7 +119,6 @@ function doFilterClear() {
           'req_app_date'   => array_key_exists( 8, $row) ? $row[ 8] : "",
 */
 
-
 $( function() {
     // Создание объекта Tabulator на DOM элементе с идентификатором "full-table"
     table = new Tabulator("#full-table", {
@@ -55,9 +132,28 @@ $( function() {
             {title:"Дата<br/>подачи документов<br/>в ФСТ-ОТМ", field:"date_apply", width:100},
             {title:"Дисциплина", field:"prog_type", width:100},
             {title:"Спортивный<br/>разряд/звание", field:"rank", width:100},
-            {title:"Статус<br/>рассмотрения<br/>документов", field:"review_state", width:100},
+            {title:"Статус<br/>рассмотрения<br/>документов", field:"review_state", width:100,
+                formatter: function(cell, formatterParams) {
+                    var state_value = cell.getValue();
+                    cell_color = cellColors[state_value]
+                    if (typeof cell_color !== 'undefined' && cell_color != null) {
+                        cell.getElement().style.backgroundColor = String(cell_color);
+                    }
+                    return state_value;
+                },
+            },
             {title:"Дата<br/>передачи документов<br/>в Москомспорт/Минспорт/ЦФКиС/ЦСТиСК", field:"date_trans_doc", width:100},
-            {title:"Приказ/<br/>Распоряжение", width:100, field:"order_no"},
+            {title:"Приказ/<br/>Распоряжение", width:170, field:"order_no",
+                formatter: function(cell, formatterParams){
+                    order_no_value = cell.getValue();
+                    if (order_no_value.startsWith("http")) {
+                        return "<a style='color:blue' target='_blank' href='" + order_no_value + "'>" + order_no_value + "</a>";
+                    }
+                    else {
+                        return (order_no_value == "") ? "" : order_no_value;
+                    }
+                },
+            },
             {title:"Дата<br/>присвоения", field:"req_app_date", width:100},
         ]
     });
@@ -71,23 +167,15 @@ $( function() {
         applyFilters();
     }
 
-    // Выбор вида программы "дистанция"
-    $( "#dist_sport" ).selectmenu({
+    // Дисциплина
+    $( "#prog" ).selectmenu({
         change: function( event, data ) {
             // Значение можно достать из data.item.value
             applyFilters();
         }
     });
 
-    // Выбор вида программы "маршрут"
-    $( "#route_sport" ).selectmenu({
-        change: function( event, data ) {
-            // Значение можно достать из data.item.value
-            applyFilters();
-        }
-    });
-
-    // Выбор категорий
+    // Разряды и звания
     $( "#rank" ).selectmenu({
         change: function( event, data ) {
             // Значение можно достать из data.item.value
@@ -95,8 +183,8 @@ $( function() {
         }
     });
 
-    // Выбор фильтра по датам
-    $( "#date" ).selectmenu({
+    // Статус рассмотрения документов
+    $( "#review_state" ).selectmenu({
         change: function( event, data ) {
             // Значение можно достать из data.item.value
             applyFilters();
@@ -132,6 +220,34 @@ $( function() {
         showLabel: false
       } ).click(function() {
         $('#dialog_about').dialog('open');
+    });
+
+    // Статистика
+    $( "#dialog_stat" ).dialog({
+        autoOpen: false,
+        width: 495,
+        modal: true,
+        buttons: {
+            OK: function() {
+                $( this ).dialog( "close" );
+            }
+        },
+        position: {
+            my: "center top",
+            at: "center top",
+            of: "#full-table", // of: window, // при window диалог съезжал вниз
+            collision: "none"
+        },
+        //create: function (event, ui) { // чтобы диалог не двигался при прокрутке
+        //  $(event.target).parent().css('position', 'fixed');
+        //}
+    });
+    $( "#show_stat_btn" ).button( {
+        icon: "ui-icon-calculator",
+        showLabel: true
+      } ).click(function() {
+        calculateStat();
+        $('#dialog_stat').dialog('open');
     });
 
     // Кнопка "Экспорт в XLSX"
