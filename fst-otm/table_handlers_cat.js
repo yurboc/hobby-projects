@@ -91,7 +91,7 @@ function calculateStat() {
         states['Всего на рассмотрении'] += 1;
         states[item['review_state']] = ((typeof states[item['review_state']] !== 'undefined')) ? (states[item['review_state']] + 1) : 1;
     });
-    outData += "<table border=1 cellspacing=0 cellpadding=5 width=475>";
+    outData += "<table border=1 cellspacing=0 cellpadding=5 width=100%>";
     Object.keys(states).forEach(function(item, i, arr) {
         cellColor = cellColors[item];
         outData += "<tr><td align=center>" + states[item] + "</td>";
